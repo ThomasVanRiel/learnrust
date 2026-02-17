@@ -1,0 +1,5 @@
+Rust is fast
+Rust is safe
+I love Python
+Rust is concurrent
+Python is slow

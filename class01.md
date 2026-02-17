@@ -110,7 +110,158 @@ By the end of Project 1, you will be able to:
 - **Compare to what you know.** You come from C++ and managed languages. I'll regularly draw parallels: "this is like a unique_ptr", "this is like an interface", "this replaces try/catch".
 - **Explain the *why*, not just the *how*.** Rust makes unusual choices (ownership, no null, no exceptions). Every time we hit one, I'll explain what problem it solves and what the alternative would cost you.
 
-## Next Steps
+### 4. First Code: Hardcoded Search
 
-- Read command line arguments in `main.rs`
-- First encounter with Rust's `String` vs `&str` and ownership
+Wrote a hardcoded search to learn basic syntax:
+
+```rust
+fn main() {
+    let poem = "I have a little shadow that goes in and out with me,
+And what can be the use of him is more than I can see.
+He is very, very like me from the heels up to the head;
+And I see him jump before me, when I jump into my bed.";
+
+    let query = "me";
+
+    for line in poem.lines() {
+        if line.contains(query) {
+            println!("{line}");
+        }
+    }
+}
+```
+
+**Key concepts introduced:**
+- `let` — declares an immutable variable (opposite default from C++; need `let mut` for mutable).
+- `"string literal"` — gives you a `&str` (string slice). A reference to text baked into the binary. Like `const char*` in C++.
+- `.lines()` — returns an iterator over lines. Lazy, no allocation.
+- `.contains()` — substring search on `&str`.
+- `println!("{line}")` — the `!` means it's a macro (not a function). Macros can accept variable arguments, which Rust functions can't. `{line}` inlines the variable (like Python f-strings).
+
+### 5. Reading Command Line Arguments
+
+```rust
+use std::env;
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    println!("{:?}", args);
+}
+```
+
+Run with: `cargo run -- hello world` (the `--` separates cargo flags from program arguments).
+
+Output: `["target/debug/rgrep", "hello", "world"]` — argument 0 is the program itself, like `argv[0]` in C.
+
+**Key concepts introduced:**
+- `use std::env` — import from standard library.
+- `env::args()` — iterator over command line arguments.
+- `.collect()` — consumes an iterator into a collection. The type annotation tells Rust *which* collection.
+- `Vec<String>` — growable array (`std::vector` in C++) of owned strings.
+- `{:?}` — debug format specifier (prints internal structure). Regular `{}` uses Display trait, which `Vec` doesn't implement.
+
+### 6. Combining It: Search a File from CLI Args
+
+```rust
+use std::env;
+use std::fs;
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    let query = &args[1];
+    let filename = &args[2];
+
+    let contents = fs::read_to_string(filename)
+        .expect("Should have been able to read the file");
+
+    for line in contents.lines() {
+        if line.contains(query.as_str()) {
+            println!("{line}");
+        }
+    }
+}
+```
+
+Run with: `cargo run -- Rust test.txt`
+
+**Key concepts introduced:**
+- `&args[1]` — borrowing. We don't need to own the query, just read it. The `&` creates a reference.
+- `fs::read_to_string()` — reads entire file into a `String`. Returns `Result<String, io::Error>`, not a plain `String`.
+- `.expect("message")` — unwraps a `Result`. On `Ok`, gives the value. On `Err`, panics with the message. Quick-and-dirty error handling — we'll improve this later.
+
+### 7. Stack vs Heap & Ownership (Conceptual)
+
+#### Stack vs Heap
+
+- **Stack** — fast, automatic, scoped. Fixed size known at compile time. Gone when the function returns.
+- **Heap** — dynamic, flexible. Allocated at runtime, lives until freed. Slower (allocation cost, pointer indirection, cache misses).
+- **Rust's approach:** No garbage collector, no manual `new`/`delete`. Ownership rules enforced at compile time.
+
+#### Ownership — the three rules
+
+1. **Each value has one owner** — one variable holds it at a time.
+2. **When the owner goes out of scope, the value is dropped** (freed automatically).
+3. **Ownership can be moved, not copied** (by default).
+
+```rust
+let s1 = String::from("hello");   // s1 owns this heap-allocated String
+let s2 = s1;                       // ownership MOVES to s2
+// println!("{s1}");               // ERROR: s1 is no longer valid
+println!("{s2}");                   // fine — s2 is the owner now
+```
+
+Move is the default in Rust (unlike C++ where copy is the default). After a move, the original variable is dead — the compiler enforces this. This prevents double-free bugs at compile time.
+
+**C++ analogy:** `String` behaves like `std::unique_ptr` — one owner, non-copyable, automatically freed when scope ends.
+
+#### Borrowing — references without ownership
+
+```rust
+let s1 = String::from("hello");
+let len = calculate_length(&s1);   // borrow s1
+println!("{s1} is {len} chars");   // s1 is still valid!
+
+fn calculate_length(s: &String) -> usize {
+    s.len()
+}
+```
+
+`&s1` creates a reference that doesn't take ownership. Two kinds:
+
+| | Shared `&T` | Mutable `&mut T` |
+|---|---|---|
+| Can read? | Yes | Yes |
+| Can modify? | No | Yes |
+| How many at once? | Unlimited | **Exactly one** |
+| C++ analogy | `const T&` | `T&` |
+
+**Key rule:** Many shared borrows OR one mutable borrow, never both at the same time. This prevents data races at compile time.
+
+#### `String` vs `&str`
+
+| | `String` | `&str` |
+|---|---|---|
+| Ownership | **Owns** its data (heap-allocated) | **Borrows** data from somewhere else |
+| Mutable | Can grow, shrink, modify | Read-only view |
+| C++ analogy | `std::string` | `const std::string_view` |
+| Created by | `String::from("hello")`, `.to_string()` | String literals `"hello"`, slicing a `String` |
+
+#### Mental model
+
+- **Ownership** = holding an object. You can give it away (move), then you don't have it.
+- **Shared borrow `&`** = lending your book. Many people can read. Nobody can write in it.
+- **Mutable borrow `&mut`** = handing someone your notebook to edit. One person at a time, and you can't read while they write.
+
+## Where We Left Off
+
+- Completed Steps 1-2 of the incremental plan (hardcoded search, CLI args + file reading).
+- Covered ownership and borrowing conceptually.
+- **Current state of `main.rs`:** reads a query and filename from CLI args, searches the file, prints matching lines.
+- **Homework:** Try changing `let query = &args[1]` to `let query = args[1]` (remove the `&`) and run `cargo check` to see the compiler error.
+
+## Next Steps (Class 02)
+
+- Step 3: Introduce a `Config` struct to hold query + filename.
+- `impl` blocks and methods.
+- Start proper error handling with `Result` and the `?` operator.

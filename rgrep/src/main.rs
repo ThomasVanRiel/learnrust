@@ -1,13 +1,17 @@
+use std::env;
+use std::fs;
+
 fn main() {
-    let poem = "I have a little shadow that goes in and out with me,
-And what can be the use of him is more than I can see.
-He is very, very like me from the heels up to the head;
-And I see him jump before me, when I jump into my bed.";
+    let args: Vec<String> = env::args().collect();
 
-    let query = "me";
+    let query = &args[1];
+    let filename = &args[2];
 
-    for line in poem.lines() {
-        if line.contains(query) {
+    let contents = fs::read_to_string(filename)
+        .expect("Should have been able to read the file");
+
+    for line in contents.lines() {
+        if line.contains(query.as_str()) {
             println!("{line}");
         }
     }

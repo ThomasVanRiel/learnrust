@@ -15,7 +15,7 @@
 ### Project 1: `rgrep` — mini grep clone (CLI tool)
 
 **Concepts:** cargo, types, ownership, borrowing, structs, enums, pattern matching, error handling, traits, file I/O, iterators, closures, testing.
-**Status:** Just started — project scaffolded with `cargo new`.
+**Status:** In progress — completed Steps 1-2 (hardcoded search, CLI args + file reading). Next: structs, error handling.
 
 ### Project 2: Data processing tool (TBD)
 
@@ -40,11 +40,38 @@
 - Introduced Project 1: `rgrep`.
 - Covered cargo basics: `cargo new`, `cargo run`, `cargo build`, `cargo check`, `cargo build --release`.
 - Explained Cargo.toml and project structure.
+- Wrote first Rust code: hardcoded search with `let`, `&str`, `.lines()`, `.contains()`, `println!`.
+- Read CLI args with `env::args()`, `Vec<String>`, `.collect()`, debug printing `{:?}`.
+- Combined CLI args + file reading with `fs::read_to_string()`, `.expect()`.
+- Deep dive on stack vs heap, ownership (three rules), borrowing (`&T` vs `&mut T`), `String` vs `&str`.
+- Completed Steps 1-2 of the incremental plan.
 - See [class01.md](class01.md) for full notes.
 
 ## Class Notes Index
 
 - [Class 01](class01.md) — Setup, tooling, Project 1 kickoff
+
+## Project 1 Incremental Plan
+
+1. ~~Hardcoded search → basic syntax, `println!`~~ **DONE**
+2. ~~Read CLI args → `String`, `Vec`, indexing~~ **DONE**
+3. Read a file → `Result`, error handling, `fs::read_to_string` — **UP NEXT**
+4. Struct for config → structs, impl blocks, methods
+5. Better error handling → `Result`, `?`, custom errors
+6. Case-insensitive search → enums, `match`
+7. Line numbers & formatting → iterators, `enumerate`, closures
+8. Tests → `#[test]`, `#[cfg(test)]`, integration tests
+9. Polish → `process::exit`, clean CLI output, edge cases
+
+## Current State of Code
+
+`rgrep/src/main.rs` reads a query and filename from CLI args, searches the file line by line, and prints matching lines. Uses `.expect()` for error handling (intentionally naive — will be improved in Steps 3-5).
+
+**Concepts Thomas has learned:** `let`, `&str`, `String`, `Vec<String>`, `println!`/`{:?}`, `use`, `for`/`if`, `.lines()`, `.contains()`, `.collect()`, `env::args()`, `fs::read_to_string()`, `.expect()`, borrowing with `&`, ownership (three rules), `String` vs `&str`.
+
+**Concepts not yet introduced:** structs, enums, `match`, `impl`, traits, `Result`/`Option` (used `.expect()` but hasn't unwrapped manually), `?` operator, closures, iterators beyond `.lines()`, testing, modules.
+
+**Homework assigned:** Remove the `&` from `let query = &args[1]` and run `cargo check` to see the ownership error.
 
 ## Notes & Observations
 
@@ -52,3 +79,5 @@
 - Prefers running commands himself — don't execute for him, give him the commands to run.
 - Asks clarifying questions before proceeding — thorough learner.
 - Wants class notes in classXX.md files for future reference.
+- Draws on C++ background — analogies to `unique_ptr`, `std::vector`, `const T&` land well.
+- Responds well to "why" explanations — not just syntax, but what problem Rust's design solves.
