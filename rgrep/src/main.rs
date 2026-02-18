@@ -16,7 +16,7 @@ struct Config {
 
 impl Config{ 
     // Equivalent to C++ static method
-    fn new(args: &Vec<String>) -> Result<Config, String> {
+    fn new(args: &[String]) -> Result<Config, String> {
         let has_i_flag = args.iter().any(|a| a == "-i");
         let has_n_flag = args.iter().any(|a| a == "-n");
 
@@ -25,6 +25,7 @@ impl Config{
             .filter(|a| !a.starts_with("-"))      // Keep elements that don't start with '-'
             .collect();                           // Build collection (Vec<String>) from iterator
 
+        #[allow(clippy::get_first)]
         match (non_flags.get(0), non_flags.get(1)) {
             (Some(q), Some(f)) => Ok(Config {
                 query: q.to_string(),
@@ -58,7 +59,7 @@ impl Config{
                 matches.push(format!("{prefix}{line}"));
             }
         }
-        return matches;
+        matches
     }
 }
 
