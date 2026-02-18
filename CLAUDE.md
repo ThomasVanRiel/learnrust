@@ -15,7 +15,7 @@
 ### Project 1: `rgrep` — mini grep clone (CLI tool)
 
 **Concepts:** cargo, types, ownership, borrowing, structs, enums, pattern matching, error handling, traits, file I/O, iterators, closures, testing.
-**Status:** In progress — completed Steps 1-2 (hardcoded search, CLI args + file reading). Next: structs, error handling.
+**Status:** In progress — completed Steps 1-3 (hardcoded search, CLI args + file reading, error handling). Next: Config struct.
 
 ### Project 2: Data processing tool (TBD)
 
@@ -47,16 +47,34 @@
 - Completed Steps 1-2 of the incremental plan.
 - See [class01.md](class01.md) for full notes.
 
+### Class 02 — 2026-02-18
+
+- Reviewed homework: ownership error when removing `&` from `&args[1]` (E0507 — cannot move out of index of Vec).
+- Discussed why you can't move out of a Vec by index (leaves a hole), but can with `.remove()`, `.pop()`, `.into_iter()`.
+- Neovim/LazyVim setup: running cargo commands from Neovim (`:!`, `:term`, `Ctrl-/` floating terminal, noice.nvim conflicts).
+- Introduced `Result<T, E>` — Rust's error handling (no exceptions, errors are values).
+- Introduced `Option<T>` — Rust's replacement for null (`Some`/`None`).
+- Replaced `.expect()` on `fs::read_to_string()` with `match` on `Ok`/`Err`.
+- Replaced `&args[1]`/`&args[2]` indexing with `.get()` returning `Option`, matched with `match`.
+- Taught tuple destructuring in `match`: `(args.get(1), args.get(2))` matched together.
+- Taught `_` wildcard as catch-all pattern.
+- Completed Step 3 of the incremental plan.
+- Started Step 4: created `Config` struct, `parse_config` function returning `Result<Config, String>`.
+- Taught implicit returns (expression without semicolon vs statement with semicolon).
+- Introduced `impl` blocks conceptually — about to apply.
+- See [class02.md](class02.md) for full notes.
+
 ## Class Notes Index
 
 - [Class 01](class01.md) — Setup, tooling, Project 1 kickoff
+- [Class 02](class02.md) — Result, Option, match, error handling
 
 ## Project 1 Incremental Plan
 
 1. ~~Hardcoded search → basic syntax, `println!`~~ **DONE**
 2. ~~Read CLI args → `String`, `Vec`, indexing~~ **DONE**
-3. Read a file → `Result`, error handling, `fs::read_to_string` — **UP NEXT**
-4. Struct for config → structs, impl blocks, methods
+3. ~~Read a file → `Result`, error handling, `fs::read_to_string`~~ **DONE**
+4. Struct for config → structs, impl blocks, methods — **UP NEXT**
 5. Better error handling → `Result`, `?`, custom errors
 6. Case-insensitive search → enums, `match`
 7. Line numbers & formatting → iterators, `enumerate`, closures
@@ -65,13 +83,13 @@
 
 ## Current State of Code
 
-`rgrep/src/main.rs` reads a query and filename from CLI args, searches the file line by line, and prints matching lines. Uses `.expect()` for error handling (intentionally naive — will be improved in Steps 3-5).
+`rgrep/src/main.rs` has a `Config` struct with `query` and `filename` fields. A standalone `parse_config` function takes `&Vec<String>` and returns `Result<Config, String>`. File reading uses `match` on `Result`. No more panics — all error paths handled gracefully. Currently in the middle of moving `parse_config` into an `impl Config` block.
 
-**Concepts Thomas has learned:** `let`, `&str`, `String`, `Vec<String>`, `println!`/`{:?}`, `use`, `for`/`if`, `.lines()`, `.contains()`, `.collect()`, `env::args()`, `fs::read_to_string()`, `.expect()`, borrowing with `&`, ownership (three rules), `String` vs `&str`.
+**Concepts Thomas has learned:** `let`, `&str`, `String`, `Vec<String>`, `println!`/`{:?}`, `use`, `for`/`if`, `.lines()`, `.contains()`, `.collect()`, `env::args()`, `fs::read_to_string()`, `.expect()`, borrowing with `&`, ownership (three rules), `String` vs `&str`, `Result<T, E>` (`Ok`/`Err`), `Option<T>` (`Some`/`None`), `match`, tuple destructuring, `_` wildcard, `.get()` on Vec, structs, `.to_string()`/`.clone()`, `String::from()`, implicit return (last expression without semicolon), `Result` as return type from functions.
 
-**Concepts not yet introduced:** structs, enums, `match`, `impl`, traits, `Result`/`Option` (used `.expect()` but hasn't unwrapped manually), `?` operator, closures, iterators beyond `.lines()`, testing, modules.
+**Concepts not yet introduced:** `impl` blocks (introduced conceptually, not yet applied), enums (seen `Result`/`Option` but not defined custom enums), traits, `?` operator, closures, iterators beyond `.lines()`, testing, modules.
 
-**Homework assigned:** Remove the `&` from `let query = &args[1]` and run `cargo check` to see the ownership error.
+**Currently working on:** Moving `parse_config` into `impl Config` block (associated functions).
 
 ## Notes & Observations
 
@@ -81,3 +99,9 @@
 - Wants class notes in classXX.md files for future reference.
 - Draws on C++ background — analogies to `unique_ptr`, `std::vector`, `const T&` land well.
 - Responds well to "why" explanations — not just syntax, but what problem Rust's design solves.
+- Uses Neovim with LazyVim. Noice.nvim can interfere with `:!` output — prefer `Ctrl-/` floating terminal or `:term`.
+
+## Tutor Habits
+
+- **Reflect and update notes regularly.** At natural breakpoints (after completing a step, before moving to a new topic, or when the student asks), update CLAUDE.md with current progress and update/create the classXX.md file with detailed notes. Don't wait until end of session.
+- **Update classXX.md after each reflection.** Class notes should be a complete, standalone reference Thomas can review later — include code snapshots, concept explanations, and key takeaways.
