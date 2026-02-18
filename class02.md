@@ -204,62 +204,282 @@ fn parse_config(args: &Vec<String>) -> Result<Config, String> {
 
 This is why `return` is rarely used in Rust — the idiomatic way is to let the last expression be the return value.
 
-## Current State of Code
+### 9. `impl` Blocks — Associated Functions & Methods
+
+Rust separates data (`struct`) from behavior (`impl`):
+
+```rust
+impl Config {
+    // Associated function (no self) — like a static method
+    // Called with: Config::new(&args)
+    fn new(args: &Vec<String>) -> Result<Config, String> { ... }
+
+    // Method (takes &self) — called on an instance
+    // Called with: config.search(&contents)
+    fn search(&self, contents: &str) -> Vec<String> { ... }
+}
+```
+
+| | Associated function | Method |
+|---|---|---|
+| First parameter | no `self` | `&self`, `&mut self`, or `self` |
+| Call syntax | `Type::func()` | `instance.method()` |
+| C++ analogy | `static` method | instance method |
+
+`&self` is shorthand for `self: &Config` — an immutable borrow of the instance.
+
+**Key difference from C++/Python:** Rust has no classes. `struct` defines data, `impl` adds behavior. No inheritance — polymorphism uses traits instead.
+
+### 10. The `?` Operator
+
+Shorthand for "unwrap `Ok` or return `Err` early":
+
+```rust
+// Without ? — verbose match
+let contents = match fs::read_to_string(&config.filename) {
+    Ok(text) => text,
+    Err(error) => return Err(error),
+};
+
+// With ? — one line
+let contents = fs::read_to_string(&config.filename)?;
+```
+
+**Requirement:** The function using `?` must return `Result`. That's why we extracted `run()`:
+
+```rust
+fn run(config: &Config) -> Result<(), String> {
+    let contents = fs::read_to_string(&config.filename)
+        .map_err(|e| e.to_string())?;
+    // ...
+    Ok(())
+}
+```
+
+- `()` is the **unit type** — like `void` in C++. `Result<(), String>` means "success with no value, or an error string."
+- `.map_err(|e| e.to_string())` converts `io::Error` to `String` to match the return type.
+- `|e| e.to_string()` is a **closure** (anonymous function) — `|params| body`.
+
+### 11. `if let` — Partial Pattern Matching
+
+When you only care about one variant of a match:
+
+```rust
+// Full match — verbose for one case
+match run(&config) {
+    Ok(()) => (),
+    Err(error) => { eprintln!("{}", error); }
+};
+
+// if let — cleaner
+if let Err(error) = run(&config) {
+    eprintln!("{}", error);
+}
+```
+
+### 12. Custom Enums
+
+Defined `SearchMode` to support `-i` flag:
+
+```rust
+enum SearchMode {
+    CaseSensitive,
+    CaseInsensitive,
+}
+```
+
+Used in `search()` to branch behavior:
+
+```rust
+let is_match = match &self.mode {
+    SearchMode::CaseSensitive => line.contains(self.query.as_str()),
+    SearchMode::CaseInsensitive => line.to_lowercase().contains(&self.query.to_lowercase()),
+};
+```
+
+### 13. Iterator Chains
+
+Parsed CLI flags using iterator methods:
+
+```rust
+let has_i_flag = args.iter().any(|a| a == "-i");
+
+let non_flags: Vec<&String> = args.iter()
+    .skip(1)                          // skip program name
+    .filter(|a| !a.starts_with("-")) // keep non-flag args
+    .collect();                       // build into Vec
+```
+
+| Method | Purpose |
+|---|---|
+| `.iter()` | Create an iterator over references |
+| `.any(\|a\| ...)` | True if any element matches |
+| `.skip(n)` | Skip first n elements |
+| `.filter(\|a\| ...)` | Keep elements matching predicate |
+| `.collect()` | Build a collection from iterator |
+| `.enumerate()` | Yield `(index, value)` pairs |
+
+All lazy — nothing runs until `.collect()` or another consumer pulls values through.
+
+### 14. Line Numbers with `.enumerate()`
+
+```rust
+for (index, line) in contents.lines().enumerate() {
+    // index is 0-based
+    let prefix = if self.line_numbers {
+        format!("{}:", index + 1)  // 1-based for display
+    } else {
+        String::new()
+    };
+    matches.push(format!("{prefix}{line}"));
+}
+```
+
+`format!()` is like `println!()` but returns a `String` instead of printing.
+
+### 15. Testing
+
+Rust has built-in testing — no external framework needed:
+
+```rust
+#[cfg(test)]           // only compiled during `cargo test`
+mod tests {
+    use super::*;      // import everything from parent module
+
+    #[test]
+    fn case_sensitive_search() {
+        let config = Config {
+            query: String::from("hello"),
+            filename: String::from("test.txt"),
+            mode: SearchMode::CaseSensitive,
+            line_numbers: false,
+        };
+
+        let contents = "hello world\nGoodbye world\nhello again";
+        let results = config.search(contents);
+
+        assert_eq!(results, vec!["hello world", "hello again"]);
+    }
+}
+```
+
+- `#[test]` — marks a function as a test
+- `assert_eq!(a, b)` — panics (fails) if `a != b`
+- `vec!["a", "b"]` — macro to create a Vec from a list
+- Run with: `cargo test`
+
+**Key pattern:** Separate logic from I/O so logic is testable. `search()` returns results instead of printing — `run()` handles printing.
+
+### 16. Polish
+
+- **`eprintln!`** — like `println!` but writes to stderr. Errors go to stderr so they don't mix with program output when piping.
+- **`process::exit(1)`** — exit with non-zero status code to signal failure to the shell.
+
+## Final State of Code
 
 ```rust
 use std::env;
 use std::fs;
+use std::process;
+
+enum SearchMode {
+    CaseSensitive,
+    CaseInsensitive,
+}
 
 struct Config {
     query: String,
     filename: String,
+    mode: SearchMode,
+    line_numbers: bool,
 }
 
-fn parse_config(args: &Vec<String>) -> Result<Config, String> {
-    match (args.get(1), args.get(2)) {
-        (Some(q), Some(f)) => Ok(Config {
-            query: q.to_string(),
-            filename: f.to_string(),
-        }),
-        _ => Err(String::from("Usage: rgrep <query> <filename>"))
+impl Config{
+    fn new(args: &Vec<String>) -> Result<Config, String> {
+        let has_i_flag = args.iter().any(|a| a == "-i");
+        let has_n_flag = args.iter().any(|a| a == "-n");
+
+        let non_flags: Vec<&String> = args.iter()
+            .skip(1)
+            .filter(|a| !a.starts_with("-"))
+            .collect();
+
+        match (non_flags.get(0), non_flags.get(1)) {
+            (Some(q), Some(f)) => Ok(Config {
+                query: q.to_string(),
+                filename: f.to_string(),
+                mode: if has_i_flag {
+                    SearchMode::CaseInsensitive
+                } else {
+                    SearchMode::CaseSensitive
+                },
+                line_numbers: has_n_flag,
+            }),
+            _ => Err(String::from("Usage: rgrep [-i] <query> <filename>"))
+        }
     }
+
+    fn search(&self, contents: &str) -> Vec<String> {
+        let mut matches: Vec<String> = Vec::new();
+        for (index, line) in contents.lines().enumerate() {
+            let is_match = match &self.mode {
+                SearchMode::CaseSensitive => line.contains(self.query.as_str()),
+                SearchMode::CaseInsensitive => {
+                    line.to_lowercase().contains(&self.query.to_lowercase())
+                }
+            };
+
+            if is_match {
+                let prefix = if self.line_numbers {
+                    format!("{}:", index + 1)
+                } else {
+                    String::new()
+                };
+                matches.push(format!("{prefix}{line}"));
+            }
+        }
+        return matches;
+    }
+}
+
+fn run(config: &Config) -> Result<(), String> {
+    let contents = fs::read_to_string(&config.filename)
+        .map_err(|e| e.to_string())?;
+
+    for line in config.search(&contents) {
+        println!("{line}");
+    }
+
+    Ok(())
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    let config = match parse_config(&args) {
+    let config = match Config::new(&args) {
         Ok(config) => config,
         Err(error) => {
-            println!("{}", error);
-            return;
+            eprintln!("{}", error);
+            process::exit(1);
         }
     };
 
-    let contents = match fs::read_to_string(&config.filename) {
-        Ok(text) => text,
-        Err(error) => {
-            println!("Error reading file '{}': {}", &config.filename, error);
-            return;
-        }
-    };
-
-    for line in contents.lines() {
-        if line.contains(&config.query) {
-            println!("{line}");
-        }
+    if let Err(error) = run(&config) {
+        eprintln!("{}", error);
+        process::exit(1);
     }
 }
 ```
 
-## Where We Left Off
+## Project 1 Complete
 
-- Completed Steps 1-3 (hardcoded search, CLI args + file reading, error handling).
-- Started Step 4: created `Config` struct and `parse_config` function.
-- **Currently working on:** Moving `parse_config` into an `impl Config` block (associated functions).
+All 9 steps finished. `rgrep` is a functional CLI grep clone with:
+- Case-sensitive and case-insensitive search (`-i`)
+- Line numbers (`-n`)
+- Proper error handling (`Result`, `?`, `eprintln!`, exit codes)
+- Structured code (`Config` struct, `impl` block, `run()` function)
+- Unit tests
 
-## Next Steps
+## Next Steps (Project 2)
 
-- `impl` blocks — attach `parse_config` to `Config` as an associated function.
-- The `?` operator — shorthand for matching on `Result`/`Option`.
-- Better error types — beyond `String` as the error type.
+- Data processing tool — iterators, generics, serde, file I/O, testing.

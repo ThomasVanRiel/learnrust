@@ -15,7 +15,7 @@
 ### Project 1: `rgrep` — mini grep clone (CLI tool)
 
 **Concepts:** cargo, types, ownership, borrowing, structs, enums, pattern matching, error handling, traits, file I/O, iterators, closures, testing.
-**Status:** In progress — completed Steps 1-3 (hardcoded search, CLI args + file reading, error handling). Next: Config struct.
+**Status:** Complete. All 9 steps done.
 
 ### Project 2: Data processing tool (TBD)
 
@@ -61,7 +61,13 @@
 - Completed Step 3 of the incremental plan.
 - Started Step 4: created `Config` struct, `parse_config` function returning `Result<Config, String>`.
 - Taught implicit returns (expression without semicolon vs statement with semicolon).
-- Introduced `impl` blocks conceptually — about to apply.
+- Moved `parse_config` into `impl Config` as `Config::new()` (associated function).
+- Added `search(&self, ...)` method — first use of `&self`.
+- Taught difference: associated functions (no self, `Type::func()`) vs methods (`&self`, `instance.method()`).
+- Step 5: extracted `run()` function, introduced `?` operator, `.map_err()`, `if let`.
+- Step 6: defined custom `SearchMode` enum, added `-i` flag support.
+- Taught iterator chains: `.iter()`, `.any()`, `.skip()`, `.filter()`, `.collect()`.
+- Closures introduced via iterator methods (`|a| a == "-i"`).
 - See [class02.md](class02.md) for full notes.
 
 ## Class Notes Index
@@ -74,22 +80,22 @@
 1. ~~Hardcoded search → basic syntax, `println!`~~ **DONE**
 2. ~~Read CLI args → `String`, `Vec`, indexing~~ **DONE**
 3. ~~Read a file → `Result`, error handling, `fs::read_to_string`~~ **DONE**
-4. Struct for config → structs, impl blocks, methods — **UP NEXT**
-5. Better error handling → `Result`, `?`, custom errors
-6. Case-insensitive search → enums, `match`
-7. Line numbers & formatting → iterators, `enumerate`, closures
-8. Tests → `#[test]`, `#[cfg(test)]`, integration tests
-9. Polish → `process::exit`, clean CLI output, edge cases
+4. ~~Struct for config → structs, impl blocks, methods~~ **DONE**
+5. ~~Better error handling → `Result`, `?`, custom errors~~ **DONE**
+6. ~~Case-insensitive search → enums, `match`~~ **DONE**
+7. ~~Line numbers & formatting → iterators, `enumerate`, closures~~ **DONE**
+8. ~~Tests → `#[test]`, `#[cfg(test)]`, integration tests~~ **DONE**
+9. ~~Polish → `process::exit`, clean CLI output, edge cases~~ **DONE**
 
 ## Current State of Code
 
-`rgrep/src/main.rs` has a `Config` struct with `query` and `filename` fields. A standalone `parse_config` function takes `&Vec<String>` and returns `Result<Config, String>`. File reading uses `match` on `Result`. No more panics — all error paths handled gracefully. Currently in the middle of moving `parse_config` into an `impl Config` block.
+`rgrep/src/main.rs` has a `Config` struct with `query`, `filename`, and `mode` (custom `SearchMode` enum) fields. `Config::new()` parses args with flag support (`-i`), separating flags from positional args using iterators. `run()` function uses `?` operator for error propagation. `search()` method matches on `SearchMode` for case-sensitive/insensitive search.
 
-**Concepts Thomas has learned:** `let`, `&str`, `String`, `Vec<String>`, `println!`/`{:?}`, `use`, `for`/`if`, `.lines()`, `.contains()`, `.collect()`, `env::args()`, `fs::read_to_string()`, `.expect()`, borrowing with `&`, ownership (three rules), `String` vs `&str`, `Result<T, E>` (`Ok`/`Err`), `Option<T>` (`Some`/`None`), `match`, tuple destructuring, `_` wildcard, `.get()` on Vec, structs, `.to_string()`/`.clone()`, `String::from()`, implicit return (last expression without semicolon), `Result` as return type from functions.
+**Concepts Thomas has learned:** `let`, `&str`, `String`, `Vec<String>`, `println!`/`eprintln!`/`{:?}`, `use`, `for`/`if`, `.lines()`, `.contains()`, `.collect()`, `env::args()`, `fs::read_to_string()`, `.expect()`, borrowing with `&`, ownership (three rules), `String` vs `&str`, `Result<T, E>` (`Ok`/`Err`), `Option<T>` (`Some`/`None`), `match`, tuple destructuring, `_` wildcard, `.get()` on Vec, structs, `.to_string()`/`.clone()`, `String::from()`, implicit return (last expression without semicolon), `Result` as return type from functions, `impl` blocks, associated functions vs methods (`Config::new()` vs `config.search()`), `&self`, `?` operator, `.map_err()`, `if let`, custom enums, `.iter()`, `.any()`, `.skip()`, `.filter()`, closures (`|a| ...`), `.to_lowercase()`, `.enumerate()`, `format!()`, `Vec::new()`, `.push()`, `let mut`, `#[test]`, `assert_eq!`, `vec![]`, `#[cfg(test)]`, `mod`, `use super::*`, `process::exit()`.
 
-**Concepts not yet introduced:** `impl` blocks (introduced conceptually, not yet applied), enums (seen `Result`/`Option` but not defined custom enums), traits, `?` operator, closures, iterators beyond `.lines()`, testing, modules.
+**Concepts not yet introduced:** traits, generics, lifetimes, modules in depth, closures in depth, `dyn`/`Box`, async.
 
-**Currently working on:** Moving `parse_config` into `impl Config` block (associated functions).
+**Project 1 status:** Complete.
 
 ## Notes & Observations
 
@@ -100,8 +106,10 @@
 - Draws on C++ background — analogies to `unique_ptr`, `std::vector`, `const T&` land well.
 - Responds well to "why" explanations — not just syntax, but what problem Rust's design solves.
 - Uses Neovim with LazyVim. Noice.nvim can interfere with `:!` output — prefer `Ctrl-/` floating terminal or `:term`.
+- Also learning Neovim — sprinkle in relevant nvim/LazyVim tips during class when they naturally fit the workflow (e.g., navigation, editing, splits, LSP features). Keep tips short and practical.
 
 ## Tutor Habits
 
 - **Reflect and update notes regularly.** At natural breakpoints (after completing a step, before moving to a new topic, or when the student asks), update CLAUDE.md with current progress and update/create the classXX.md file with detailed notes. Don't wait until end of session.
 - **Update classXX.md after each reflection.** Class notes should be a complete, standalone reference Thomas can review later — include code snapshots, concept explanations, and key takeaways.
+- **Sprinkle Neovim tips.** Occasionally share a useful nvim/LazyVim tip when it's relevant to what Thomas is doing (e.g., navigating errors, jumping to definitions, efficient editing). Keep it brief — one tip at a time, not a lecture.
