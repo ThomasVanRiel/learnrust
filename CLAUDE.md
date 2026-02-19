@@ -29,6 +29,11 @@
 
 **Concepts:** concurrency, unsafe, FFI, performance.
 
+### Project 5 (Capstone): Tetris TUI
+
+**Concepts:** everything from Projects 1-4 applied together. TUI rendering (ratatui), input handling (crossterm), game loops, concurrency (timer + input threads), state machines, complex data structures.
+**Status:** Not started — graduation project after completing Projects 2-4.
+
 ## Session Log
 
 ### Class 01 — 2026-02-16
