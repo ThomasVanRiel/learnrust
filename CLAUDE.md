@@ -17,9 +17,10 @@
 **Concepts:** cargo, types, ownership, borrowing, structs, enums, pattern matching, error handling, traits, file I/O, iterators, closures, testing.
 **Status:** Complete. All 9 steps done.
 
-### Project 2: Data processing tool (TBD)
+### Project 2: `csvtool` — CSV data processor
 
 **Concepts:** iterators, generics, serde, file I/O, testing.
+**Status:** In progress. Config struct + serde deserialization done. Filter parsing done. Not yet wired together.
 
 ### Project 3: Web API (TBD)
 
@@ -52,6 +53,29 @@
 - Completed Steps 1-2 of the incremental plan.
 - See [class01.md](class01.md) for full notes.
 
+### Class 03 — 2026-02-20
+
+- Started Project 2: `csvtool` — CSV data processor.
+- Fixed rust-analyzer in Neovim/WSL: needed `rustup component add rust-analyzer` explicitly.
+- Clarified: `crates.nvim` is a plugin, not an LSP server — use `:LspRestart rust_analyzer`, not `:LspRestart`.
+- Created `csvtool` project with `cargo new`, added `data/people.csv` sample dataset.
+- Step 1: Manual CSV parsing with `.split(',')` — showed it breaks on quoted fields like `"Smith, John"`.
+- Step 2: Added `csv` crate, replaced manual parsing with `csv::Reader::from_path()` + `rdr.records()`.
+- Step 3: Added `serde` with `features = ["derive"]`, `#[derive(Debug, Deserialize)]` on `Person` struct.
+- Switched to `rdr.deserialize()` — CSV rows deserialized directly into typed `Person` structs.
+- Discussed serde vs C#/Unity JSON serialization — same concept, but compile-time, zero-overhead.
+- Added formatted table output with format string alignment (`{:<20}`, `{:>8}`) and `.repeat()`.
+- Step 4 (in progress): Built `Config` struct with `filename: String` and `filter: Option<(String, String)>`.
+- Taught `.position()` on iterators — returns `Option<usize>` with the index of a matching element.
+- Practiced `if let Some(x)` with `Option` (extending from class 02).
+- Taught `if let` as an expression that returns a value (both branches must return same type).
+- Nested `if let` for chained Option unwrapping.
+- Direct indexing `vec[0]` vs `.get(0)` — use `[i]` when you've already guaranteed existence.
+- Field init shorthand: `filter,` instead of `filter: filter,` (same as JS/ES6).
+- Early `return` from functions: `return Err(...)` to exit before the final expression.
+- `Config::new()` is fully written but not yet wired into `main()` — next step.
+- See [class03.md](class03.md) for full notes.
+
 ### Class 02 — 2026-02-18
 
 - Reviewed homework: ownership error when removing `&` from `&args[1]` (E0507 — cannot move out of index of Vec).
@@ -79,6 +103,7 @@
 
 - [Class 01](class01.md) — Setup, tooling, Project 1 kickoff
 - [Class 02](class02.md) — Result, Option, match, error handling
+- [Class 03](class03.md) — Project 2 kickoff, csv crate, serde, Config struct, Option patterns
 
 ## Project 1 Incremental Plan
 
@@ -94,13 +119,18 @@
 
 ## Current State of Code
 
+### rgrep (Project 1) — Complete
 `rgrep/src/main.rs` has a `Config` struct with `query`, `filename`, and `mode` (custom `SearchMode` enum) fields. `Config::new()` parses args with flag support (`-i`), separating flags from positional args using iterators. `run()` function uses `?` operator for error propagation. `search()` method matches on `SearchMode` for case-sensitive/insensitive search.
 
-**Concepts Thomas has learned:** `let`, `&str`, `String`, `Vec<String>`, `println!`/`eprintln!`/`{:?}`, `use`, `for`/`if`, `.lines()`, `.contains()`, `.collect()`, `env::args()`, `fs::read_to_string()`, `.expect()`, borrowing with `&`, ownership (three rules), `String` vs `&str`, `Result<T, E>` (`Ok`/`Err`), `Option<T>` (`Some`/`None`), `match`, tuple destructuring, `_` wildcard, `.get()` on Vec, structs, `.to_string()`/`.clone()`, `String::from()`, implicit return (last expression without semicolon), `Result` as return type from functions, `impl` blocks, associated functions vs methods (`Config::new()` vs `config.search()`), `&self`, `?` operator, `.map_err()`, `if let`, custom enums, `.iter()`, `.any()`, `.skip()`, `.filter()`, closures (`|a| ...`), `.to_lowercase()`, `.enumerate()`, `format!()`, `Vec::new()`, `.push()`, `let mut`, `#[test]`, `assert_eq!`, `vec![]`, `#[cfg(test)]`, `mod`, `use super::*`, `process::exit()`.
+### csvtool (Project 2) — In Progress
+`csvtool/src/main.rs` has a `Person` struct with `#[derive(Debug, Deserialize)]`. `Config` struct has `filename: String` and `filter: Option<(String, String)>`. `Config::new()` parses args using `.position()` + nested `if let` to find `--filter field=value`. Main function still uses inline arg parsing (not yet wired to `Config`). Next step: wire `Config::new()` into `main()` and implement filter logic in the print loop.
 
-**Concepts not yet introduced:** traits, generics, lifetimes, modules in depth, closures in depth, `dyn`/`Box`, async.
+**Concepts Thomas has learned:** `let`, `&str`, `String`, `Vec<String>`, `println!`/`eprintln!`/`{:?}`, `use`, `for`/`if`, `.lines()`, `.contains()`, `.collect()`, `env::args()`, `fs::read_to_string()`, `.expect()`, borrowing with `&`, ownership (three rules), `String` vs `&str`, `Result<T, E>` (`Ok`/`Err`), `Option<T>` (`Some`/`None`), `match`, tuple destructuring, `_` wildcard, `.get()` on Vec, structs, `.to_string()`/`.clone()`, `String::from()`, implicit return (last expression without semicolon), `Result` as return type from functions, `impl` blocks, associated functions vs methods (`Config::new()` vs `config.search()`), `&self`, `?` operator, `.map_err()`, `if let`, custom enums, `.iter()`, `.any()`, `.skip()`, `.filter()`, closures (`|a| ...`), `.to_lowercase()`, `.enumerate()`, `format!()`, `Vec::new()`, `.push()`, `let mut`, `#[test]`, `assert_eq!`, `vec![]`, `#[cfg(test)]`, `mod`, `use super::*`, `process::exit()`, external crates (`csv`, `serde`), `#[derive(Deserialize)]`, `csv::Reader::from_path()`, `.records()`/`.deserialize()`, format string alignment (`{:<N}`/`{:>N}`), `.repeat()`, `Option<(String, String)>` (tuples in generics), `.position()`, `if let` as expression returning a value, nested `if let`, direct indexing `vec[0]` vs `.get(0)`, field init shorthand, early `return`, `u32`.
+
+**Concepts not yet introduced:** traits, generics, lifetimes, modules in depth, closures in depth, `dyn`/`Box`, async, `HashMap`.
 
 **Project 1 status:** Complete.
+**Project 2 status:** In progress.
 
 ## Notes & Observations
 
