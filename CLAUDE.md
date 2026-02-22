@@ -20,7 +20,7 @@
 ### Project 2: `csvtool` — CSV data processor
 
 **Concepts:** iterators, generics, serde, file I/O, testing.
-**Status:** In progress. Config struct + serde deserialization done. Filter parsing done. Not yet wired together.
+**Status:** In progress. Config wired into main. Equality filter working. Next: inequality operators with `FilterOp` enum.
 
 ### Project 3: Web API (TBD)
 
@@ -52,6 +52,19 @@
 - Deep dive on stack vs heap, ownership (three rules), borrowing (`&T` vs `&mut T`), `String` vs `&str`.
 - Completed Steps 1-2 of the incremental plan.
 - See [class01.md](class01.md) for full notes.
+
+### Class 04 — 2026-02-22
+
+- Wired `Config::new()` into `main()`.
+- Extracted `Person::print()` method — avoids repeating the format string.
+- Implemented filter logic using `match filter.as_str()` — explained why `String` can't be matched directly against literals.
+- Discussed `as_str()` vs `as_ref()` vs `as_deref()`.
+- Discussed Rust's lack of runtime reflection — `match` with hardcoded arms is the idiomatic solution.
+- `.parse::<u32>()` for converting filter query strings to integers — returns `Result`, error handled with `eprintln!` + `process::exit`.
+- Turbofish syntax `::<T>` — explicitly specifying generic types when inference isn't enough.
+- `String::from()` vs `.to_string()` — `.to_string()` works on any `Display` type, `String::from()` only on `&str`.
+- Teased next step: inequality operators (`>`, `<`, `>=`, `<=`) → will need a custom `FilterOp` enum and updated `Config` struct.
+- See [class04.md](class04.md) for full notes.
 
 ### Class 03 — 2026-02-20
 
@@ -123,7 +136,7 @@
 `rgrep/src/main.rs` has a `Config` struct with `query`, `filename`, and `mode` (custom `SearchMode` enum) fields. `Config::new()` parses args with flag support (`-i`), separating flags from positional args using iterators. `run()` function uses `?` operator for error propagation. `search()` method matches on `SearchMode` for case-sensitive/insensitive search.
 
 ### csvtool (Project 2) — In Progress
-`csvtool/src/main.rs` has a `Person` struct with `#[derive(Debug, Deserialize)]`. `Config` struct has `filename: String` and `filter: Option<(String, String)>`. `Config::new()` parses args using `.position()` + nested `if let` to find `--filter field=value`. Main function still uses inline arg parsing (not yet wired to `Config`). Next step: wire `Config::new()` into `main()` and implement filter logic in the print loop.
+`csvtool/src/main.rs` has a `Person` struct with `#[derive(Debug, Deserialize)]` and a `print()` method. `Config` struct has `filename: String` and `filter: Option<(String, String)>`. `Config::new()` is wired into `main()`. Filter logic uses `match filter.as_str()` with arms for each field; numeric fields use `.parse::<u32>()`. Next step: extend filter to support inequality operators (`>`, `<`, `>=`, `<=`) using a `FilterOp` enum.
 
 **Concepts Thomas has learned:** `let`, `&str`, `String`, `Vec<String>`, `println!`/`eprintln!`/`{:?}`, `use`, `for`/`if`, `.lines()`, `.contains()`, `.collect()`, `env::args()`, `fs::read_to_string()`, `.expect()`, borrowing with `&`, ownership (three rules), `String` vs `&str`, `Result<T, E>` (`Ok`/`Err`), `Option<T>` (`Some`/`None`), `match`, tuple destructuring, `_` wildcard, `.get()` on Vec, structs, `.to_string()`/`.clone()`, `String::from()`, implicit return (last expression without semicolon), `Result` as return type from functions, `impl` blocks, associated functions vs methods (`Config::new()` vs `config.search()`), `&self`, `?` operator, `.map_err()`, `if let`, custom enums, `.iter()`, `.any()`, `.skip()`, `.filter()`, closures (`|a| ...`), `.to_lowercase()`, `.enumerate()`, `format!()`, `Vec::new()`, `.push()`, `let mut`, `#[test]`, `assert_eq!`, `vec![]`, `#[cfg(test)]`, `mod`, `use super::*`, `process::exit()`, external crates (`csv`, `serde`), `#[derive(Deserialize)]`, `csv::Reader::from_path()`, `.records()`/`.deserialize()`, format string alignment (`{:<N}`/`{:>N}`), `.repeat()`, `Option<(String, String)>` (tuples in generics), `.position()`, `if let` as expression returning a value, nested `if let`, direct indexing `vec[0]` vs `.get(0)`, field init shorthand, early `return`, `u32`.
 
