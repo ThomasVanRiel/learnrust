@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::env;
 
-enum FilterType {
+enum FilterOp {
     Eq,
     Gt,
     St,
@@ -36,6 +36,20 @@ impl Config {
         let filename = args.get(1);
         let filter = if let Some(pos) = args.iter().position(|a| a.eq("--filter")) {
             if let Some(filter_string) = args.get(pos + 1) {
+                // TODO: Add FilterOp enum parsing and update config.filter[2] to include the
+                // operator.
+                //
+                // You haven't used str::find() yet — look it up. It searches for a substring inside a string and
+                // returns... something familiar.
+                //
+                // A rough sketch of the approach:
+                // 1. Define your FilterOp enum
+                // 2. Try each operator string in the right order (longest first)
+                // 3. When you find one, use its position and length to slice the string into field + value
+                //
+                // That slicing part — &s[..pos] and &s[pos + op.len()..] — is new syntax. It's how you take a
+                // substring in Rust using a range index. Worth experimenting with.
+
                 let parts: Vec<&str> = filter_string.split("=").take(2).collect();
                 if parts.len() == 2 {
                     Some((

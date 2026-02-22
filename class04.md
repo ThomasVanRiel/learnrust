@@ -204,9 +204,85 @@ The parsing side needs to detect which operator appears in the filter string bef
 | `.to_string()` vs `String::from()` | `.to_string()` works on any `Display` type; `String::from()` only on `&str` |
 | `impl Person { fn print() }` | Extract repeated formatting into a method to avoid duplication |
 
-## Next Session
+## Next Step: Inequality Operators (In Progress)
 
-- Design `FilterOp` enum
-- Update `Config` to store `(String, FilterOp, String)`
-- Update `Config::new()` parsing to detect operator
-- Apply inequality comparisons in the filter loop
+### Step 1 — Define the `FilterOp` enum
+
+```rust
+enum FilterOp {
+    Eq,  // =
+    Neq, // !=
+    Gt,  // >
+    Lt,  // <
+    Gte, // >=
+    Lte, // <=
+}
+```
+
+### Step 2 — Update `Config`
+
+`filter` currently stores `(String, String)` — field and value. Add the operator:
+
+```rust
+struct Config {
+    filename: String,
+    filter: Option<(String, FilterOp, String)>,
+}
+```
+
+### Step 3 — Parsing: detecting the operator
+
+The tricky part. You can't just split on `=` anymore. You need to:
+1. Detect **which** operator is present in the string
+2. Find **where** it is so you can slice out the field name and value
+
+**New tool: `str::find()`**
+
+```rust
+let s = "age>=21";
+s.find(">=") // returns Some(3) — the byte index where ">=" starts
+```
+
+`.find()` searches for a substring and returns `Option<usize>` — the index of the match, or `None`. You've seen `Option<usize>` before from `.position()`.
+
+**Order matters — check longer operators first.**
+
+If you check `>` before `>=`, then `"age>=21".find(">")` returns `Some(3)` and you'd split incorrectly, treating `=21` as the value. Always check `>=` before `>`, and `<=` before `<`.
+
+Suggested order: `!=`, `>=`, `<=`, `>`, `<`, `=`
+
+**String slicing with ranges**
+
+Once you know the operator's position and length, slice the string:
+
+```rust
+let s = "age>=21";
+let pos = 3;       // where ">=" starts
+let op_len = 2;    // length of ">="
+
+let field = &s[..pos];           // "age"  — from start up to pos
+let value = &s[pos + op_len..];  // "21"   — from after the operator to end
+```
+
+`&s[..pos]` and `&s[pos + n..]` are **range indexes** — new syntax. `..` is Rust's range operator:
+- `..pos` means "from start up to (not including) pos"
+- `pos..` means "from pos to the end"
+- `a..b` means "from a up to (not including) b"
+- `a..=b` means "from a up to and including b"
+
+These work on strings, slices, and anywhere ranges are accepted.
+
+### Step 4 — Applying the operator in the filter loop
+
+For string fields (`name`, `city`) only `Eq` and `Neq` make sense. For numeric fields (`age`, `salary`) all operators apply. Parse the value to `u32` then compare using the operator:
+
+```rust
+match op {
+    FilterOp::Eq  => record.age == query_val,
+    FilterOp::Neq => record.age != query_val,
+    FilterOp::Gt  => record.age >  query_val,
+    FilterOp::Lt  => record.age <  query_val,
+    FilterOp::Gte => record.age >= query_val,
+    FilterOp::Lte => record.age <= query_val,
+}
+```
