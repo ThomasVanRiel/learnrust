@@ -20,7 +20,7 @@
 ### Project 2: `csvtool` — CSV data processor
 
 **Concepts:** iterators, generics, serde, file I/O, testing.
-**Status:** In progress. Config wired into main. Equality filter working. Next: inequality operators with `FilterOp` enum.
+**Status:** In progress. `FilterOp` enum implemented with `compare<T: PartialOrd>()` method. All six operators (`==`, `!=`, `>`, `<`, `>=`, `<=`) working. Next: further features TBD.
 
 ### Project 3: Web API (TBD)
 
@@ -52,6 +52,18 @@
 - Deep dive on stack vs heap, ownership (three rules), borrowing (`&T` vs `&mut T`), `String` vs `&str`.
 - Completed Steps 1-2 of the incremental plan.
 - See [class01.md](class01.md) for full notes.
+
+### Class 05 — 2026-02-23
+
+- Implemented `FilterOp` enum with `compare<T: PartialOrd>()` method — first use of generics and trait bounds.
+- `for` loops over arrays, with tuple destructuring in the loop variable.
+- `str::find()` — substring search returning `Option<usize>`.
+- String slicing with range syntax (`&s[..n]`, `&s[n..]`, `a..b`, `a..=b`).
+- Operator ordering: check longer operators before shorter ones to avoid ambiguous matches.
+- Bug found and fixed: hardcoded `+ 2` offset in string slicing should be `+ op_str.len()`.
+- `#[derive(Debug)]` — encountered and used, full explanation deferred to traits session.
+- `impl` blocks on enums (not just structs).
+- See [class05.md](class05.md) for full notes.
 
 ### Class 04 — 2026-02-22
 
@@ -117,6 +129,8 @@
 - [Class 01](class01.md) — Setup, tooling, Project 1 kickoff
 - [Class 02](class02.md) — Result, Option, match, error handling
 - [Class 03](class03.md) — Project 2 kickoff, csv crate, serde, Config struct, Option patterns
+- [Class 04](class04.md) — Config wired into main, filter logic, match on String, parse, turbofish
+- [Class 05](class05.md) — FilterOp enum, generics, for loops, str::find, string slicing, bug fix
 
 ## Project 1 Incremental Plan
 
@@ -136,9 +150,9 @@
 `rgrep/src/main.rs` has a `Config` struct with `query`, `filename`, and `mode` (custom `SearchMode` enum) fields. `Config::new()` parses args with flag support (`-i`), separating flags from positional args using iterators. `run()` function uses `?` operator for error propagation. `search()` method matches on `SearchMode` for case-sensitive/insensitive search.
 
 ### csvtool (Project 2) — In Progress
-`csvtool/src/main.rs` has a `Person` struct with `#[derive(Debug, Deserialize)]` and a `print()` method. `Config` struct has `filename: String` and `filter: Option<(String, String)>`. `Config::new()` is wired into `main()`. Filter logic uses `match filter.as_str()` with arms for each field; numeric fields use `.parse::<u32>()`. Next step: extend filter to support inequality operators (`>`, `<`, `>=`, `<=`) using a `FilterOp` enum.
+`csvtool/src/main.rs` has a `Person` struct with `#[derive(Debug, Deserialize)]` and a `print()` method. `FilterOp` enum has six variants (`Eq`, `Ne`, `Gt`, `St`, `Ge`, `Se`) with a `compare<T: PartialOrd>()` method. `Config` struct has `filename: String` and `filter: Option<(String, FilterOp, String)>`. `Config::build_filter()` parses the operator out of the filter string using `.find()` and string slicing, iterating over operators in longest-first order. All six comparison operators are working end-to-end.
 
-**Concepts Thomas has learned:** `let`, `&str`, `String`, `Vec<String>`, `println!`/`eprintln!`/`{:?}`, `use`, `for`/`if`, `.lines()`, `.contains()`, `.collect()`, `env::args()`, `fs::read_to_string()`, `.expect()`, borrowing with `&`, ownership (three rules), `String` vs `&str`, `Result<T, E>` (`Ok`/`Err`), `Option<T>` (`Some`/`None`), `match`, tuple destructuring, `_` wildcard, `.get()` on Vec, structs, `.to_string()`/`.clone()`, `String::from()`, implicit return (last expression without semicolon), `Result` as return type from functions, `impl` blocks, associated functions vs methods (`Config::new()` vs `config.search()`), `&self`, `?` operator, `.map_err()`, `if let`, custom enums, `.iter()`, `.any()`, `.skip()`, `.filter()`, closures (`|a| ...`), `.to_lowercase()`, `.enumerate()`, `format!()`, `Vec::new()`, `.push()`, `let mut`, `#[test]`, `assert_eq!`, `vec![]`, `#[cfg(test)]`, `mod`, `use super::*`, `process::exit()`, external crates (`csv`, `serde`), `#[derive(Deserialize)]`, `csv::Reader::from_path()`, `.records()`/`.deserialize()`, format string alignment (`{:<N}`/`{:>N}`), `.repeat()`, `Option<(String, String)>` (tuples in generics), `.position()`, `if let` as expression returning a value, nested `if let`, direct indexing `vec[0]` vs `.get(0)`, field init shorthand, early `return`, `u32`.
+**Concepts Thomas has learned:** `let`, `&str`, `String`, `Vec<String>`, `println!`/`eprintln!`/`{:?}`, `use`, `for`/`if`, `.lines()`, `.contains()`, `.collect()`, `env::args()`, `fs::read_to_string()`, `.expect()`, borrowing with `&`, ownership (three rules), `String` vs `&str`, `Result<T, E>` (`Ok`/`Err`), `Option<T>` (`Some`/`None`), `match`, tuple destructuring, `_` wildcard, `.get()` on Vec, structs, `.to_string()`/`.clone()`, `String::from()`, implicit return (last expression without semicolon), `Result` as return type from functions, `impl` blocks, associated functions vs methods (`Config::new()` vs `config.search()`), `&self`, `?` operator, `.map_err()`, `if let`, custom enums, `.iter()`, `.any()`, `.skip()`, `.filter()`, closures (`|a| ...`), `.to_lowercase()`, `.enumerate()`, `format!()`, `Vec::new()`, `.push()`, `let mut`, `#[test]`, `assert_eq!`, `vec![]`, `#[cfg(test)]`, `mod`, `use super::*`, `process::exit()`, external crates (`csv`, `serde`), `#[derive(Deserialize)]`, `#[derive(Debug)]` (used, full explanation deferred), `csv::Reader::from_path()`, `.records()`/`.deserialize()`, format string alignment (`{:<N}`/`{:>N}`), `.repeat()`, `Option<(String, String)>` (tuples in generics), `.position()`, `.find()`, `if let` as expression returning a value, nested `if let`, direct indexing `vec[0]` vs `.get(0)`, field init shorthand, early `return`, `u32`, `for` loops with tuple destructuring, string slicing with range syntax (`&s[..n]`, `&s[n..]`), range syntax (`..`, `..=`, `a..b`), generics `<T>`, trait bounds `<T: Trait>`, `PartialOrd`, `impl` on enums.
 
 **Concepts not yet introduced:** traits, generics, lifetimes, modules in depth, closures in depth, `dyn`/`Box`, async, `HashMap`.
 

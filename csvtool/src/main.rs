@@ -1,12 +1,27 @@
 use serde::Deserialize;
-use std::env;
+use std::{env, iter::Filter, ops::Deref};
 
+#[derive(Debug)]
 enum FilterOp {
     Eq,
+    Ne,
     Gt,
     St,
     Ge,
     Se,
+}
+
+impl FilterOp {
+    fn compare<T: std::cmp::PartialOrd>(&self, rhs: T, lhs: T) -> bool {
+        match self {
+            FilterOp::Eq => rhs == lhs,
+            FilterOp::Ne => rhs != lhs,
+            FilterOp::Gt => rhs > lhs,
+            FilterOp::St => rhs < lhs,
+            FilterOp::Ge => rhs >= lhs,
+            FilterOp::Se => rhs <= lhs,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -28,38 +43,47 @@ impl Person {
 
 struct Config {
     filename: String,
-    filter: Option<(String, String)>,
+    filter: Option<(String, FilterOp, String)>,
 }
 
 impl Config {
+    fn build_filter(filter_string: &String) -> Option<(String, FilterOp, String)> {
+        let ops = [
+            ("==", FilterOp::Eq),
+            ("!=", FilterOp::Ne),
+            (">=", FilterOp::Ge),
+            ("<=", FilterOp::Se),
+            (">", FilterOp::Gt),
+            ("<", FilterOp::St),
+        ];
+        for (op_str, op_obj) in ops {
+            if let Some(op_pos) = filter_string.find(op_str) {
+                // Check if two sides are present around the operator
+                if filter_string.len() > op_pos + op_str.len() {
+                    return Some((
+                        filter_string[..op_pos].to_string().to_lowercase(),
+                        op_obj,
+                        filter_string[op_pos + op_str.len()..]
+                            .to_string()
+                            .to_lowercase(),
+                    ));
+                } else {
+                    println!("Filter syntax is col{op_str}query, not {filter_string}");
+                    return None;
+                }
+            }
+        }
+
+        // If no filter string was found
+        println!("Filter syntax is col<Op>query, not {filter_string}");
+        None
+    }
+
     fn new(args: &[String]) -> Result<Config, String> {
         let filename = args.get(1);
         let filter = if let Some(pos) = args.iter().position(|a| a.eq("--filter")) {
             if let Some(filter_string) = args.get(pos + 1) {
-                // TODO: Add FilterOp enum parsing and update config.filter[2] to include the
-                // operator.
-                //
-                // You haven't used str::find() yet — look it up. It searches for a substring inside a string and
-                // returns... something familiar.
-                //
-                // A rough sketch of the approach:
-                // 1. Define your FilterOp enum
-                // 2. Try each operator string in the right order (longest first)
-                // 3. When you find one, use its position and length to slice the string into field + value
-                //
-                // That slicing part — &s[..pos] and &s[pos + op.len()..] — is new syntax. It's how you take a
-                // substring in Rust using a range index. Worth experimenting with.
-
-                let parts: Vec<&str> = filter_string.split("=").take(2).collect();
-                if parts.len() == 2 {
-                    Some((
-                        parts[0].to_string().to_lowercase(),
-                        parts[1].to_string().to_lowercase(),
-                    ))
-                } else {
-                    println!("Filter syntax is col=query, not {filter_string}");
-                    None
-                }
+                Config::build_filter(filter_string)
             } else {
                 println!("--filter flag specified but no filter provided.");
                 None
@@ -110,16 +134,16 @@ fn main() {
             }
         };
 
-        if let Some((filter, query)) = &config.filter {
+        if let Some((filter, op, query)) = &config.filter {
             match filter.as_str() {
                 "name" => {
-                    if record.name.to_lowercase() == query.to_lowercase() {
+                    if op.compare(record.name.to_lowercase(), query.to_lowercase()) {
                         record.print();
                     }
                 }
                 "age" => match query.parse::<u32>() {
                     Ok(age_query) => {
-                        if record.age == age_query {
+                        if op.compare(record.age, age_query) {
                             record.print();
                         }
                     }
@@ -129,13 +153,13 @@ fn main() {
                     }
                 },
                 "city" => {
-                    if record.city.to_lowercase() == query.to_lowercase() {
+                    if op.compare(record.city.to_lowercase(), query.to_lowercase()) {
                         record.print();
                     }
                 }
                 "salary" => match query.parse::<u32>() {
                     Ok(salary_query) => {
-                        if record.salary == salary_query {
+                        if op.compare(record.salary, salary_query) {
                             record.print();
                         }
                     }
