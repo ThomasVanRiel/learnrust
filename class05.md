@@ -258,14 +258,138 @@ You might wonder why it's `Partial`Ord. The `Ord` trait means *every* pair of va
 
 ---
 
+## Error Handling — `run()` and `main()`
+
+After getting the filter logic working, you refactored the error handling to match the rgrep pattern.
+
+### `run()` function
+
+Extracted a `run()` function that owns all the CSV reading and filtering logic, and returns `Result<(), String>`:
+
+```rust
+fn run(config: &Config) -> Result<(), String> {
+    let mut reader = match csv::Reader::from_path(&config.filename) {
+        Ok(r) => r,
+        Err(e) => return Err(e.to_string()),
+    };
+
+    for result in reader.deserialize() {
+        let record: Person = match result {
+            Ok(r) => r,
+            Err(e) => return Err(e.to_string()),
+        };
+        // ... filter + print
+    }
+
+    Ok(())
+}
+```
+
+Key ideas:
+- `Result<(), String>` — success produces no value (`()`), failure produces an error message
+- `return Err(e.to_string())` — early return on error, immediately exits `run()`
+- `Ok(())` — explicit success at the end; `()` is the unit type (like `void`)
+
+### Filter dispatch in `run()`
+
+The filter logic lives inside `run()`, matching on the field name and parsing the query as needed:
+
+```rust
+if let Some((filter, op, query)) = &config.filter {
+    match filter.as_str() {
+        "name" => {
+            if op.compare(record.name.to_lowercase(), query.to_lowercase()) {
+                record.print();
+            }
+        }
+        "age" => match query.parse::<u32>() {
+            Ok(age_query) => {
+                if op.compare(record.age, age_query) { record.print(); }
+            }
+            Err(e) => return Err(format!("Error: {} while parsing \"{}\" to u32", e, query)),
+        },
+        "city" => { /* same as name */ }
+        "salary" => { /* same as age */ }
+        _ => eprintln!("Filter target not in record headings!"),
+    }
+} else {
+    record.print();
+}
+```
+
+- `query.parse::<u32>()` to convert the filter value for numeric fields — returns `Err` if the user passed e.g. `age>foo`
+- `return Err(format!(...))` propagates a descriptive error message back through `run()` to `main()`
+- `format!()` builds an owned `String` with interpolated values — same as `println!` but returns the string instead of printing it
+
+### `main()` — the rgrep pattern
+
+```rust
+fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    let config = match Config::new(&args) {
+        Ok(config) => config,
+        Err(error) => {
+            eprintln!("{}", error);
+            std::process::exit(1);
+        }
+    };
+
+    if let Err(error) = run(&config) {
+        eprintln!("{}", error);
+        std::process::exit(1);
+    }
+}
+```
+
+Two patterns for handling errors from `main`:
+- `match Config::new(&args)` — needed because `main` must *bind* the `Config` value on success
+- `if let Err(error) = run(&config)` — cleaner when you only care about the error path; `Ok(())` is silently ignored
+
+---
+
 ## Project 2 Status
 
-`csvtool` now supports full filter expressions:
+`csvtool` now supports full filter expressions with proper error handling:
 
 ```
 csvtool data/people.csv --filter age>36
 csvtool data/people.csv --filter salary>=80000
 csvtool data/people.csv --filter name==Alice
+csvtool data/people.csv --filter city<=seattle
 ```
 
-`FilterOp` enum with `compare()` method handles all six operators. `build_filter` parses the operator out of the filter string. `Config.filter` stores `Option<(String, FilterOp, String)>`.
+Full pipeline: `Config::new()` parses args → `build_filter()` parses the operator → `run()` reads CSV, applies filter, prints results. Errors at any stage propagate cleanly to `main()` with descriptive messages.
+
+---
+
+## Up Next (Class 06)
+
+Three features planned, in order:
+
+### 1. Sorting (`--sort <field>`)
+
+**The problem:** current `run()` processes records one at a time (streaming). Sorting requires seeing all records first. So `run()` must:
+1. Collect all (filtered) records into a `Vec<Person>`
+2. Sort the vec
+3. Print
+
+**What to implement:**
+- Add `sort: Option<String>` to `Config`
+- Parse `--sort <field>` in `Config::new()` using `.position()` (same pattern as `--filter`)
+- In `run()`: collect into `Vec<Person>` first, then call `.sort_by()` on it
+- New concepts: `.sort_by()`, closures with two args, `.cmp()`, the `Ordering` enum
+
+**Starting point for next session:** add `sort: Option<String>` to `Config` and parse the `--sort` flag.
+
+### 2. Aggregation (`--count`, `--sum <field>`, `--avg <field>`)
+
+- Iterator methods: `.fold()`, `.map()`, `.sum()`
+- No new concepts needed beyond what's covered in sorting
+
+### 3. Traits
+
+- Explain `#[derive(Debug)]` properly
+- Define a custom trait
+- `impl Trait for Type`
+- Potentially: make filtering/sorting work generically via traits

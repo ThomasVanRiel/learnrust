@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use std::{env, iter::Filter, ops::Deref};
+use std::env;
 
 #[derive(Debug)]
 enum FilterOp {
@@ -115,11 +115,17 @@ fn main() {
         }
     };
 
-    let mut reader = match csv::Reader::from_path(config.filename) {
+    if let Err(error) = run(&config) {
+        eprintln!("{}", error);
+        std::process::exit(1);
+    }
+}
+
+fn run(config: &Config) -> Result<(), String> {
+    let mut reader = match csv::Reader::from_path(&config.filename) {
         Ok(r) => r,
         Err(e) => {
-            eprintln!("Error: {}", e);
-            std::process::exit(1);
+            return Err(e.to_string());
         }
     };
 
@@ -129,8 +135,7 @@ fn main() {
         let record: Person = match result {
             Ok(r) => r,
             Err(e) => {
-                eprintln!("Error: {}", e);
-                std::process::exit(1);
+                return Err(e.to_string());
             }
         };
 
@@ -148,8 +153,10 @@ fn main() {
                         }
                     }
                     Err(e) => {
-                        eprintln!("Error: {} while parsing string \"{}\" to u32", e, query);
-                        std::process::exit(1);
+                        return Err(format!(
+                            "Error: {} while parsing string \"{}\" to u32",
+                            e, query
+                        ));
                     }
                 },
                 "city" => {
@@ -164,8 +171,10 @@ fn main() {
                         }
                     }
                     Err(e) => {
-                        eprintln!("Error: {} while parsing string \"{}\" to u32", e, query);
-                        std::process::exit(1);
+                        return Err(format!(
+                            "Error: {} while parsing string \"{}\" to u32",
+                            e, query
+                        ));
                     }
                 },
                 _ => {
@@ -176,4 +185,6 @@ fn main() {
             record.print();
         }
     }
+
+    Ok(())
 }
