@@ -14,16 +14,17 @@ struct Config {
     line_numbers: bool,
 }
 
-impl Config{ 
+impl Config {
     // Equivalent to C++ static method
     fn new(args: &[String]) -> Result<Config, String> {
         let has_i_flag = args.iter().any(|a| a == "-i");
         let has_n_flag = args.iter().any(|a| a == "-n");
 
-        let non_flags: Vec<&String> = args.iter() // Create iterator over vec
-            .skip(1)                              // Skip program name 
-            .filter(|a| !a.starts_with("-"))      // Keep elements that don't start with '-'
-            .collect();                           // Build collection (Vec<String>) from iterator
+        let non_flags: Vec<&String> = args
+            .iter() // Create iterator over vec
+            .skip(1) // Skip program name
+            .filter(|a| !a.starts_with("-")) // Keep elements that don't start with '-'
+            .collect(); // Build collection (Vec<String>) from iterator
 
         #[allow(clippy::get_first)]
         match (non_flags.get(0), non_flags.get(1)) {
@@ -37,9 +38,9 @@ impl Config{
                 },
                 line_numbers: has_n_flag,
             }),
-            _ => Err(String::from("Usage: rgrep [-i] <query> <filename>"))
+            _ => Err(String::from("Usage: rgrep [-i] <query> <filename>")),
         }
-    } 
+    }
 
     // Equivalent to C++ method
     fn search(&self, contents: &str) -> Vec<String> {
@@ -47,7 +48,9 @@ impl Config{
         for (index, line) in contents.lines().enumerate() {
             let is_match = match &self.mode {
                 SearchMode::CaseSensitive => line.contains(self.query.as_str()),
-                SearchMode::CaseInsensitive => line.to_lowercase().contains(&self.query.to_lowercase()),
+                SearchMode::CaseInsensitive => {
+                    line.to_lowercase().contains(&self.query.to_lowercase())
+                }
             };
 
             if is_match {
@@ -64,8 +67,9 @@ impl Config{
 }
 
 fn run(config: &Config) -> Result<(), String> {
-    let contents = fs::read_to_string(&config.filename)
-        .map_err(|e| e.to_string())?;
+    // Error checking: map_err converts error to string, without touching Ok()
+    // ...? expands to match unwrapping Ok(...) or returning Err(...)
+    let contents = fs::read_to_string(&config.filename).map_err(|e| e.to_string())?;
 
     // Search query in file
     for line in config.search(&contents) {
@@ -92,8 +96,6 @@ fn main() {
         eprintln!("{}", error);
         process::exit(1);
     }
-
-    
 }
 
 // TESTS

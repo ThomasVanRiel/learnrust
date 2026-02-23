@@ -146,24 +146,23 @@ fn run(config: &Config) -> Result<(), String> {
                         record.print();
                     }
                 }
-                "age" => match query.parse::<u32>() {
-                    Ok(age_query) => {
-                        if op.compare(record.age, age_query) {
-                            record.print();
-                        }
+                // First method to parse a string to u32 and returning on error
+                "age" => {
+                    if op.compare(
+                        record.age,
+                        query.parse::<u32>().map_err(|e| {
+                            format!("Error: {e} while parsing string \"{query}\" to u32")
+                        })?,
+                    ) {
+                        record.print();
                     }
-                    Err(e) => {
-                        return Err(format!(
-                            "Error: {} while parsing string \"{}\" to u32",
-                            e, query
-                        ));
-                    }
-                },
+                }
                 "city" => {
                     if op.compare(record.city.to_lowercase(), query.to_lowercase()) {
                         record.print();
                     }
                 }
+                // Second method to parse a string to u32 and returning on error (explicit match)
                 "salary" => match query.parse::<u32>() {
                     Ok(salary_query) => {
                         if op.compare(record.salary, salary_query) {
