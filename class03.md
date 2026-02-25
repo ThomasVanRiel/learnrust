@@ -24,9 +24,11 @@ rustup component add rust-analyzer
 ```
 
 Also: `crates.nvim` is a Neovim plugin, not an LSP server. Use:
+
 ```
 :LspRestart rust_analyzer
 ```
+
 not `:LspRestart` (which tries to restart all "servers" including crates.nvim, causing an error).
 
 ---
@@ -42,6 +44,7 @@ mkdir data
 ```
 
 Sample data in `data/people.csv`:
+
 ```csv
 name,age,city,salary
 Alice,32,New York,95000
@@ -75,6 +78,7 @@ CSV has an actual spec (RFC 4180) handling quoted fields, escaped quotes, differ
 ## Step 2: The `csv` Crate
 
 Add to `Cargo.toml`:
+
 ```toml
 [dependencies]
 csv = "1"
@@ -96,6 +100,7 @@ for result in rdr.records() {
 ```
 
 Key things:
+
 - `mut` on `rdr` — the reader advances a cursor through the file as you iterate, so it must be mutable
 - `rdr.records()` returns an iterator where **each item is a `Result`** — errors can happen per-row, not just on open
 - `csv::Reader` used directly without a `use` import — you can always use the full path `crate::Type`
@@ -145,11 +150,13 @@ for result in rdr.deserialize() {
 **What `#[derive(Deserialize)]` does:** Generates the deserialization code at compile time based on field names. The CSV header row (`name,age,city,salary`) is matched against struct field names automatically.
 
 **Comparison to C#/Unity:**
+
 ```csharp
 // C# — runtime reflection
 [JsonProperty("name")]
 public string Name { get; set; }
 ```
+
 ```rust
 // Rust — compile-time, zero runtime overhead
 #[derive(Deserialize)]
@@ -177,6 +184,7 @@ println!("{:<20} {:>4} {:<12} {:>8}", record.name, record.age, record.city, reco
 `.repeat(n)` on a string/`&str` — repeats the string n times.
 
 Output:
+
 ```
 NAME                  AGE  CITY            SALARY
 ----------------------------------------------------
@@ -233,6 +241,7 @@ let filter = if let Some(pos) = args.iter().position(|a| a.eq("--filter")) {
 **Nested `if let`:** Each layer unwraps one more `Option`. First finds the position, then gets the next argument, then validates the split result.
 
 **Direct indexing vs `.get()`:**
+
 - `parts.get(0)` — returns `Option<&&str>`, safe even if index is out of bounds
 - `parts[0]` — returns `&str` directly, panics if out of bounds
 

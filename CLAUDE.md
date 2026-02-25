@@ -20,7 +20,7 @@
 ### Project 2: `csvtool` — CSV data processor
 
 **Concepts:** iterators, generics, serde, file I/O, testing.
-**Status:** In progress. Filter and sort working. `Display` trait implemented on `Person`. `run()` follows a clean read → filter → sort → print pipeline. Next: TBD (modules, more features, or move to Project 3).
+**Status:** In progress. Modules extracted (`filter.rs`, `person.rs`, `config.rs`, `main.rs`). Unit tests added to `filter.rs`. Next: move to Project 3 or add more features.
 
 ### Project 3: Web API (TBD)
 
@@ -52,6 +52,19 @@
 - Deep dive on stack vs heap, ownership (three rules), borrowing (`&T` vs `&mut T`), `String` vs `&str`.
 - Completed Steps 1-2 of the incremental plan.
 - See [class01.md](class01.md) for full notes.
+
+### Class 07 — 2026-02-25
+
+- Module system: `mod foo;` loads `src/foo.rs`, `mod foo { }` is inline — same result.
+- Split `main.rs` into `filter.rs`, `person.rs`, `config.rs`, `main.rs`.
+- Visibility: `pub` on struct, fields, and methods. Enum variants always public if enum is `pub`.
+- Module paths: `crate::filter::FilterOp` (absolute), `super::` (one level up, like `..`).
+- Same folder ≠ same scope — directory layout is irrelevant to the module tree.
+- `#[cfg(test)]` / `mod tests` / `use super::*` — unit tests next to code.
+- `cargo test <substring>` — runs matching tests. Full path shown: `filter::tests::fn_name`.
+- Nested test modules for grouping: `use super::super::*` to reach two levels up.
+- `use super::*` idiomatic in tests; `use crate::...` idiomatic everywhere else.
+- See [class07.md](class07.md) for full notes.
 
 ### Class 06 — 2026-02-25
 
@@ -171,6 +184,7 @@
 - [Class 04](class04.md) — Config wired into main, filter logic, match on String, parse, turbofish
 - [Class 05](class05.md) — FilterOp enum, generics, for loops, str::find, string slicing, bug fix
 - [Class 06](class06.md) — Traits, Display, collect into Result<Vec>, retain, sort_by, map_err
+- [Class 07](class07.md) — Modules, visibility, pub, crate:: vs super::, unit tests
 
 ## Project 1 Incremental Plan
 
@@ -190,16 +204,18 @@
 `rgrep/src/main.rs` has a `Config` struct with `query`, `filename`, and `mode` (custom `SearchMode` enum) fields. `Config::new()` parses args with flag support (`-i`), separating flags from positional args using iterators. `run()` function uses `?` operator for error propagation. `search()` method matches on `SearchMode` for case-sensitive/insensitive search.
 
 ### csvtool (Project 2) — In Progress
-`csvtool/src/main.rs` has a `Person` struct with `#[derive(Debug, Deserialize)]` and `impl Display`. `FilterOp` enum has six variants with a `compare<T: PartialOrd>()` method. `Config` struct has `filename: String`, `filters: Vec<(String, FilterOp, String)>`, `sort: Option<String>`, and `limit: Option<usize>`. `Config::new()` parses multiple `--filter` flags via an iterator chain (`enumerate` + `filter` + `filter_map`). `run()` follows a clean read → filter → sort → limit → print pipeline: collects into `Vec<Person>`, loops over filters calling `retain()` per filter (AND logic), sorts with `sort_by()`, truncates with `truncate()`, prints via `Display`.
+Split into four modules: `filter.rs` (`FilterOp` enum + `compare<T: PartialOrd>()`), `person.rs` (`Person` struct + `impl Display`), `config.rs` (`Config` struct + `new()` + `build_filter()`), `main.rs` (`main()` + `run()`). Unit tests in `filter.rs` under `#[cfg(test)] mod tests`. `run()` follows a clean read → filter → sort → limit → print/stats pipeline.
 
 **Concepts Thomas has learned:** `let`, `&str`, `String`, `Vec<String>`, `println!`/`eprintln!`/`{:?}`, `use`, `for`/`if`, `.lines()`, `.contains()`, `.collect()`, `env::args()`, `fs::read_to_string()`, `.expect()`, borrowing with `&`, ownership (three rules), `String` vs `&str`, `Result<T, E>` (`Ok`/`Err`), `Option<T>` (`Some`/`None`), `match`, tuple destructuring, `_` wildcard, `.get()` on Vec, structs, `.to_string()`/`.clone()`, `String::from()`, implicit return (last expression without semicolon), `Result` as return type from functions, `impl` blocks, associated functions vs methods (`Config::new()` vs `config.search()`), `&self`, `?` operator, `.map_err()`, `if let`, custom enums, `.iter()`, `.any()`, `.skip()`, `.filter()`, closures (`|a| ...`), `.to_lowercase()`, `.enumerate()`, `format!()`, `Vec::new()`, `.push()`, `let mut`, `#[test]`, `assert_eq!`, `vec![]`, `#[cfg(test)]`, `mod`, `use super::*`, `process::exit()`, external crates (`csv`, `serde`), `#[derive(Deserialize)]`, `#[derive(Debug)]` (used, full explanation deferred), `csv::Reader::from_path()`, `.records()`/`.deserialize()`, format string alignment (`{:<N}`/`{:>N}`), `.repeat()`, `Option<(String, String)>` (tuples in generics), `.position()`, `.find()`, `if let` as expression returning a value, nested `if let`, direct indexing `vec[0]` vs `.get(0)`, field init shorthand, early `return`, `u32`, `for` loops with tuple destructuring, string slicing with range syntax (`&s[..n]`, `&s[n..]`), range syntax (`..`, `..=`, `a..b`), generics `<T>`, trait bounds `<T: Trait>`, `PartialOrd`, `impl` on enums, `Result<(), String>` (unit type `()` as success value), `return Err(...)` for early exit, `format!()` to build error strings.
 
 **Concepts Thomas has also learned (Class 06):** traits (`trait`, `impl Trait for Type`), static vs dynamic dispatch, `dyn Trait`, downcasting via `Any`, `#[derive(Debug)]` as generated trait impl, `impl std::fmt::Display`, `write!(f, ...)`, `std::fmt::Result`, `collect::<Result<Vec<T>, _>>()`, `Vec::retain()`, `sort_by()`, `std::cmp::Ordering`, `Ord` vs `PartialOrd`, `map_err()`, turbofish vs type annotation in chains, `Copy` vs non-`Copy` types, `usize` vs `u32`, `Vec::truncate()`, function pointers (redundant closure), `.all()`, `.zip()`.
 
-**Concepts not yet introduced:** lifetimes, modules in depth, closures in depth, `Box<dyn Trait>`, async, `HashMap`.
+**Concepts Thomas has also learned (Class 07):** file-based modules (`mod foo;` → `src/foo.rs`), inline modules (`mod foo { }`), module tree, `pub` on structs/fields/enums/functions, enum variants always public, `crate::` absolute paths, `super::` relative paths, `#[cfg(test)]`, `mod tests`, `use super::*` in test modules, `cargo test <substring>` filtering, nested test modules.
+
+**Concepts not yet introduced:** lifetimes, closures in depth, `Box<dyn Trait>`, async, `HashMap`.
 
 **Project 1 status:** Complete.
-**Project 2 status:** In progress.
+**Project 2 status:** In progress. Modules extracted. Tests added.
 
 ## Notes & Observations
 
