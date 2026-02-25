@@ -1,3 +1,4 @@
+use core::hash;
 use serde::Deserialize;
 use std::env;
 
@@ -48,6 +49,7 @@ struct Config {
     filters: Vec<(String, FilterOp, String)>,
     sort: Option<String>,
     limit: Option<usize>,
+    stats: bool,
 }
 
 impl Config {
@@ -85,6 +87,8 @@ impl Config {
 
     fn new(args: &[String]) -> Result<Config, String> {
         let filename = args.get(1);
+
+        let has_stats_flag = args.iter().any(|a| a.eq("--stats"));
 
         let filters: Vec<_> = args
             .iter()
@@ -127,12 +131,13 @@ impl Config {
             None
         };
 
-        match (filename, filters, sort, limit) {
-            (Some(filename), filters, sort, limit) => Ok(Config {
+        match (filename, filters, sort, limit, has_stats_flag) {
+            (Some(filename), filters, sort, limit, stats) => Ok(Config {
                 filename: filename.to_string(),
                 filters,
                 sort,
                 limit,
+                stats: has_stats_flag,
             }),
             _ => Err(String::from(
                 "Usage: csvtool <file> [--filter heading=query]",
@@ -165,9 +170,6 @@ fn run(config: &Config) -> Result<(), String> {
             return Err(e.to_string());
         }
     };
-
-    println!("{:<20} {:>4} {:<12} {:>8}", "NAME", "AGE", "CITY", "SALARY");
-    println!("{}", "-".repeat(52));
 
     // Read csv to vec
     let mut people: Vec<Person> = reader
@@ -212,9 +214,29 @@ fn run(config: &Config) -> Result<(), String> {
         people.truncate(limit);
     }
 
-    // Print resulting list
-    for person in people {
-        println!("{}", person)
+    // Check if stats are requested
+    if config.stats {
+        // Print stats
+        println!("Rows: {}", people.len());
+
+        // Check if there are items to show stats
+        if !people.is_empty() {
+            let ages: Vec<u32> = people.iter().map(|person| person.age).collect();
+            println!(
+                "age     min: {:>10} max: {:>10} avg: {:>10.2}",
+                ages.iter().min().unwrap(),
+                ages.iter().max().unwrap(),
+                (ages.iter().sum::<u32>() as f64) / (ages.len() as f64),
+            );
+        }
+    } else {
+        // Else print resulting list
+        println!("{:<20} {:>4} {:<12} {:>8}", "NAME", "AGE", "CITY", "SALARY");
+        println!("{}", "-".repeat(52));
+
+        for person in people {
+            println!("{}", person)
+        }
     }
 
     Ok(())

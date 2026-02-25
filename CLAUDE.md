@@ -20,7 +20,7 @@
 ### Project 2: `csvtool` — CSV data processor
 
 **Concepts:** iterators, generics, serde, file I/O, testing.
-**Status:** In progress. `FilterOp` enum implemented with `compare<T: PartialOrd>()` method. All six operators (`==`, `!=`, `>`, `<`, `>=`, `<=`) working. Next: further features TBD.
+**Status:** In progress. Filter and sort working. `Display` trait implemented on `Person`. `run()` follows a clean read → filter → sort → print pipeline. Next: TBD (modules, more features, or move to Project 3).
 
 ### Project 3: Web API (TBD)
 
@@ -52,6 +52,35 @@
 - Deep dive on stack vs heap, ownership (three rules), borrowing (`&T` vs `&mut T`), `String` vs `&str`.
 - Completed Steps 1-2 of the incremental plan.
 - See [class01.md](class01.md) for full notes.
+
+### Class 06 — 2026-02-25
+
+- Traits introduced: contract mental model, `impl Trait for Type` syntax.
+- Static dispatch (generics, zero-cost) vs dynamic dispatch (`dyn Trait`, vtable).
+- Polymorphism in Rust vs Java/C# — no inheritance, traits instead.
+- Downcasting: recovering concrete type from `dyn Trait` via `Any`, returns `Option` not exception.
+- `#[derive(Debug)]` fully explained — compiler generates `impl Debug for Person`.
+- Implemented `std::fmt::Display` for `Person` — first hand-written trait impl, replaced `print()` method.
+- `write!(f, ...)` vs `println!` — same format strings, different destination; `write!` returns errors.
+- `std::fmt::Result` is a type alias for `Result<(), std::fmt::Error>`.
+- `{}` calls `Display::fmt`, `{:?}` calls `Debug::fmt`.
+- Refactored `run()` to collect all records into `Vec<Person>` first, enabling sort.
+- `collect::<Result<Vec<T>, _>>()` — collects fallible iterator, short-circuits on first error.
+- `map_err()` — transforms only the `Err` side of `Result`, passes `Ok` through unchanged.
+- Fallible operations inside closures: lift the `?` out of the closure by pre-parsing before the closure runs.
+- `Vec::retain()` — stable, in-place filtering (vs unstable `extract_if`).
+- `sort_by()` with `cmp()` — used when sort key type varies at runtime.
+- `Ord` vs `PartialOrd` — total order required for sorting; `f64` uses `PartialOrd` due to `NaN`.
+- Turbofish vs type annotation in chains — turbofish annotates intermediate types inline; annotation requires breaking the chain into separate bindings.
+- `--limit N` added: `Vec::truncate()`, `usize` vs `u32` (platform pointer size vs fixed domain value).
+- `Copy` vs non-`Copy` types: `Copy` types are stack-only and duplicated silently; non-`Copy` own heap memory and are moved. `usize` is `Copy` so `if let Some(limit) = config.limit` copies safely without `&`.
+- Multiple `--filter` flags: `filters: Vec<(String, FilterOp, String)>` — empty vec means no filters.
+- Parsing multiple flags with an iterator chain: `enumerate()` + `filter()` + `filter_map()` to find all flag positions.
+- Redundant closure lint: `|s| Config::build_filter(s)` simplified to `Config::build_filter` (function pointer).
+- Multi-filter `retain()`: loop over filters, call `retain()` once per filter — achieves AND logic, each pass narrows the vec.
+- `.all()` — returns `true` if closure returns `true` for every element, short-circuits on first `false`. Mirror of `.any()`.
+- `.zip()` — pairs two iterators element-by-element into tuples.
+- See [class06.md](class06.md) for full notes.
 
 ### Class 05 — 2026-02-23
 
@@ -137,6 +166,7 @@
 - [Class 03](class03.md) — Project 2 kickoff, csv crate, serde, Config struct, Option patterns
 - [Class 04](class04.md) — Config wired into main, filter logic, match on String, parse, turbofish
 - [Class 05](class05.md) — FilterOp enum, generics, for loops, str::find, string slicing, bug fix
+- [Class 06](class06.md) — Traits, Display, collect into Result<Vec>, retain, sort_by, map_err
 
 ## Project 1 Incremental Plan
 
@@ -156,11 +186,13 @@
 `rgrep/src/main.rs` has a `Config` struct with `query`, `filename`, and `mode` (custom `SearchMode` enum) fields. `Config::new()` parses args with flag support (`-i`), separating flags from positional args using iterators. `run()` function uses `?` operator for error propagation. `search()` method matches on `SearchMode` for case-sensitive/insensitive search.
 
 ### csvtool (Project 2) — In Progress
-`csvtool/src/main.rs` has a `Person` struct with `#[derive(Debug, Deserialize)]` and a `print()` method. `FilterOp` enum has six variants (`Eq`, `Ne`, `Gt`, `St`, `Ge`, `Se`) with a `compare<T: PartialOrd>()` method. `Config` struct has `filename: String` and `filter: Option<(String, FilterOp, String)>`. `Config::build_filter()` parses the operator out of the filter string using `.find()` and string slicing, iterating over operators in longest-first order. `run()` function reads the CSV, applies filter dispatch with `match filter.as_str()`, and returns `Result<(), String>`. `main()` follows the rgrep pattern with `match Config::new()` and `if let Err = run()`. All six comparison operators working end-to-end with proper error propagation.
+`csvtool/src/main.rs` has a `Person` struct with `#[derive(Debug, Deserialize)]` and `impl Display`. `FilterOp` enum has six variants with a `compare<T: PartialOrd>()` method. `Config` struct has `filename: String`, `filters: Vec<(String, FilterOp, String)>`, `sort: Option<String>`, and `limit: Option<usize>`. `Config::new()` parses multiple `--filter` flags via an iterator chain (`enumerate` + `filter` + `filter_map`). `run()` follows a clean read → filter → sort → limit → print pipeline: collects into `Vec<Person>`, loops over filters calling `retain()` per filter (AND logic), sorts with `sort_by()`, truncates with `truncate()`, prints via `Display`.
 
 **Concepts Thomas has learned:** `let`, `&str`, `String`, `Vec<String>`, `println!`/`eprintln!`/`{:?}`, `use`, `for`/`if`, `.lines()`, `.contains()`, `.collect()`, `env::args()`, `fs::read_to_string()`, `.expect()`, borrowing with `&`, ownership (three rules), `String` vs `&str`, `Result<T, E>` (`Ok`/`Err`), `Option<T>` (`Some`/`None`), `match`, tuple destructuring, `_` wildcard, `.get()` on Vec, structs, `.to_string()`/`.clone()`, `String::from()`, implicit return (last expression without semicolon), `Result` as return type from functions, `impl` blocks, associated functions vs methods (`Config::new()` vs `config.search()`), `&self`, `?` operator, `.map_err()`, `if let`, custom enums, `.iter()`, `.any()`, `.skip()`, `.filter()`, closures (`|a| ...`), `.to_lowercase()`, `.enumerate()`, `format!()`, `Vec::new()`, `.push()`, `let mut`, `#[test]`, `assert_eq!`, `vec![]`, `#[cfg(test)]`, `mod`, `use super::*`, `process::exit()`, external crates (`csv`, `serde`), `#[derive(Deserialize)]`, `#[derive(Debug)]` (used, full explanation deferred), `csv::Reader::from_path()`, `.records()`/`.deserialize()`, format string alignment (`{:<N}`/`{:>N}`), `.repeat()`, `Option<(String, String)>` (tuples in generics), `.position()`, `.find()`, `if let` as expression returning a value, nested `if let`, direct indexing `vec[0]` vs `.get(0)`, field init shorthand, early `return`, `u32`, `for` loops with tuple destructuring, string slicing with range syntax (`&s[..n]`, `&s[n..]`), range syntax (`..`, `..=`, `a..b`), generics `<T>`, trait bounds `<T: Trait>`, `PartialOrd`, `impl` on enums, `Result<(), String>` (unit type `()` as success value), `return Err(...)` for early exit, `format!()` to build error strings.
 
-**Concepts not yet introduced:** traits, generics, lifetimes, modules in depth, closures in depth, `dyn`/`Box`, async, `HashMap`.
+**Concepts Thomas has also learned (Class 06):** traits (`trait`, `impl Trait for Type`), static vs dynamic dispatch, `dyn Trait`, downcasting via `Any`, `#[derive(Debug)]` as generated trait impl, `impl std::fmt::Display`, `write!(f, ...)`, `std::fmt::Result`, `collect::<Result<Vec<T>, _>>()`, `Vec::retain()`, `sort_by()`, `std::cmp::Ordering`, `Ord` vs `PartialOrd`, `map_err()`, turbofish vs type annotation in chains, `Copy` vs non-`Copy` types, `usize` vs `u32`, `Vec::truncate()`, function pointers (redundant closure), `.all()`, `.zip()`.
+
+**Concepts not yet introduced:** lifetimes, modules in depth, closures in depth, `Box<dyn Trait>`, async, `HashMap`.
 
 **Project 1 status:** Complete.
 **Project 2 status:** In progress.
