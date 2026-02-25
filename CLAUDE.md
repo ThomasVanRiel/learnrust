@@ -159,6 +159,10 @@
 - Closures introduced via iterator methods (`|a| a == "-i"`).
 - See [class02.md](class02.md) for full notes.
 
+## Reference Sheets
+
+- [string.md](string.md) — `String` vs `&str`, conversion methods, when to use which
+
 ## Class Notes Index
 
 - [Class 01](class01.md) — Setup, tooling, Project 1 kickoff

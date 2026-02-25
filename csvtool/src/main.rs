@@ -1,6 +1,7 @@
-use core::hash;
 use serde::Deserialize;
+use std::collections::HashSet;
 use std::env;
+use std::hash::Hash;
 
 #[derive(Debug)]
 enum FilterOp {
@@ -137,7 +138,7 @@ impl Config {
                 filters,
                 sort,
                 limit,
-                stats: has_stats_flag,
+                stats,
             }),
             _ => Err(String::from(
                 "Usage: csvtool <file> [--filter heading=query]",
@@ -228,6 +229,26 @@ fn run(config: &Config) -> Result<(), String> {
                 ages.iter().max().unwrap(),
                 (ages.iter().sum::<u32>() as f64) / (ages.len() as f64),
             );
+
+            let salaries: Vec<u32> = people.iter().map(|person| person.salary).collect();
+            println!(
+                "salary  min: {:>10} max: {:>10} avg: {:>10.2}",
+                salaries.iter().min().unwrap(),
+                salaries.iter().max().unwrap(),
+                (salaries.iter().sum::<u32>() as f64) / (salaries.len() as f64),
+            );
+
+            let mut names: Vec<String> = people
+                .iter()
+                .map(|a| a.name.to_string())
+                .collect::<Vec<String>>();
+            names.sort();
+            names.dedup();
+            println!("name    {} unique values", names.len());
+
+            // Or using a HashSet
+            let cities: HashSet<&str> = people.iter().map(|p| p.city.as_str()).collect();
+            println!("city    {} unique values", cities.len());
         }
     } else {
         // Else print resulting list
