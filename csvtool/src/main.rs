@@ -45,7 +45,7 @@ impl std::fmt::Display for Person {
 
 struct Config {
     filename: String,
-    filter: Option<(String, FilterOp, String)>,
+    filters: Vec<(String, FilterOp, String)>,
     sort: Option<String>,
     limit: Option<usize>,
 }
@@ -86,17 +86,20 @@ impl Config {
     fn new(args: &[String]) -> Result<Config, String> {
         let filename = args.get(1);
 
-        // Check if filter flag is in args and get query
-        let filter = if let Some(pos) = args.iter().position(|a| a.eq("--filter")) {
-            if let Some(filter_string) = args.get(pos + 1) {
-                Config::build_filter(filter_string)
-            } else {
-                println!("--filter flag specified but no filter provided.");
-                None
-            }
-        } else {
-            None
-        };
+        let filters: Vec<_> = args
+            .iter()
+            // Loop over the args in tuples (position, arg)
+            .enumerate()
+            // Filter items on arg == "--filter"
+            .filter(|(_, a)| a.as_str() == "--filter")
+            // Recreate the iterator by replacing the item by the arg at the next position
+            .filter_map(|(i, _)| args.get(i + 1))
+            // Replace the items by the filter item (String, FilterOp, String)
+            // Closure `|s| Config::build_filter(s)` is shortened to the function because the
+            // signature matches. No closure middleman required.
+            .filter_map(Config::build_filter)
+            // Collect the iterator to Vec<(String, FilterOp, String)>
+            .collect();
 
         // Check if sort flag is in args and get key
         let sort = if let Some(pos) = args.iter().position(|a| a.eq("--sort")) {
@@ -124,10 +127,10 @@ impl Config {
             None
         };
 
-        match (filename, filter, sort, limit) {
-            (Some(filename), filter, sort, limit) => Ok(Config {
+        match (filename, filters, sort, limit) {
+            (Some(filename), filters, sort, limit) => Ok(Config {
                 filename: filename.to_string(),
-                filter,
+                filters,
                 sort,
                 limit,
             }),
@@ -173,7 +176,7 @@ fn run(config: &Config) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
     // Filter
-    if let Some((filter, op, query)) = &config.filter {
+    for (filter, op, query) in &config.filters {
         let numeric_query = if filter == "age" || filter == "salary" {
             Some(
                 query
