@@ -212,7 +212,7 @@ Split into four modules: `filter.rs` (`FilterOp` enum + `compare<T: PartialOrd>(
 
 **Concepts Thomas has also learned (Class 07):** file-based modules (`mod foo;` → `src/foo.rs`), inline modules (`mod foo { }`), module tree, `pub` on structs/fields/enums/functions, enum variants always public, `crate::` absolute paths, `super::` relative paths, `#[cfg(test)]`, `mod tests`, `use super::*` in test modules, `cargo test <substring>` filtering, nested test modules.
 
-**Concepts not yet introduced:** lifetimes, closures in depth, `Box<dyn Trait>`, async, `HashMap`.
+**Concepts not yet introduced:** lifetimes, closures in depth, `Box<dyn Trait>`, async, `HashMap`, slices (`&[T]`, `&str` as slice, slice vs `Vec`/`String`).
 
 **Project 1 status:** Complete.
 **Project 2 status:** In progress. Modules extracted. Tests added.
