@@ -20,7 +20,7 @@
 ### Project 2: `csvtool` — CSV data processor
 
 **Concepts:** iterators, generics, serde, file I/O, testing.
-**Status:** In progress. Modules extracted (`filter.rs`, `person.rs`, `config.rs`, `main.rs`). Unit tests added to `filter.rs`. Next: move to Project 3 or add more features.
+**Status:** Complete. Modules extracted, tests added, `--group-by` with `HashMap` implemented. Moving to lifetimes session then Project 3.
 
 ### Project 3: Web API (TBD)
 
@@ -52,6 +52,32 @@
 - Deep dive on stack vs heap, ownership (three rules), borrowing (`&T` vs `&mut T`), `String` vs `&str`.
 - Completed Steps 1-2 of the incremental plan.
 - See [class01.md](class01.md) for full notes.
+
+### Class 09 — 2026-02-28
+
+- Lifetimes: the dangling reference problem they solve.
+- Lifetime elision — compiler infers lifetimes in simple cases (one input → output borrows from it).
+- `&s[..end]` — fat pointer (ptr + len) into same memory, no copy. Equivalent to C++ `string_view`.
+- Explicit annotations: `fn longer<'a>(a: &'a str, b: &'a str) -> &'a str` — needed when multiple inputs, one output.
+- `'a` is a generic parameter, declared in `<>` like `T`, then used in the signature.
+- Annotations are constraints (relationships), not durations.
+- Lifetimes in structs: `struct Config<'a> { query: &'a str }` — struct can't outlive what it borrows.
+- Practical rule: own data in structs (`String` not `&str`), use references in functions. Lifetime-annotated structs are uncommon in real Rust.
+- Lifetimes are compile-time only — zero assembly generated.
+- See [class09.md](class09.md) for full notes.
+
+### Class 08 — 2026-02-28
+
+- `HashMap<K, V>` introduced — insert, lookup, O(1) average.
+- `entry().or_insert(default)` — idiomatic upsert, single lookup.
+- `*entry += 1` — dereferencing `&mut T` to mutate through a reference.
+- Sorting a `HashMap`: collect entries to `Vec<(&K, &V)>`, then `sort_by_key`.
+- `sort_by_key` — sort on a single extracted field (simpler than `sort_by` for this case).
+- `BTreeMap` introduced — sorted map, O(log n), vs `HashMap` O(1) unordered.
+- Immutable borrows lock mutation: holding `&` refs into a collection prevents `&mut` for the borrow's duration.
+- Non-Lexical Lifetimes (NLL): borrows end at last use, not closing brace.
+- Added `--group-by <field>` feature to csvtool.
+- See [class08.md](class08.md) for full notes.
 
 ### Class 07 — 2026-02-25
 
@@ -185,6 +211,8 @@
 - [Class 05](class05.md) — FilterOp enum, generics, for loops, str::find, string slicing, bug fix
 - [Class 06](class06.md) — Traits, Display, collect into Result<Vec>, retain, sort_by, map_err
 - [Class 07](class07.md) — Modules, visibility, pub, crate:: vs super::, unit tests
+- [Class 08](class08.md) — HashMap, entry API, BTreeMap, sorting, NLL, --group-by feature
+- [Class 09](class09.md) — Lifetimes, elision, explicit annotations, structs with references
 
 ## Project 1 Incremental Plan
 
@@ -212,10 +240,14 @@ Split into four modules: `filter.rs` (`FilterOp` enum + `compare<T: PartialOrd>(
 
 **Concepts Thomas has also learned (Class 07):** file-based modules (`mod foo;` → `src/foo.rs`), inline modules (`mod foo { }`), module tree, `pub` on structs/fields/enums/functions, enum variants always public, `crate::` absolute paths, `super::` relative paths, `#[cfg(test)]`, `mod tests`, `use super::*` in test modules, `cargo test <substring>` filtering, nested test modules.
 
-**Concepts not yet introduced:** lifetimes, closures in depth, `Box<dyn Trait>`, async, `HashMap`.
+**Concepts Thomas has also learned (Class 08):** `HashMap<K, V>`, `HashMap::new()`, `.entry().or_insert()`, dereferencing `&mut T` with `*`, `sort_by_key`, `BTreeMap` (sorted map, O(log n)), immutable borrows locking mutation, Non-Lexical Lifetimes (NLL).
+
+**Concepts Thomas has also learned (Class 09):** lifetimes (compile-time only, zero runtime cost), lifetime elision, explicit lifetime annotations (`'a`), lifetime parameters in `<>`, `&str` as fat pointer (ptr + len) into existing memory, lifetimes in structs, practical rule (own data in structs).
+
+**Concepts not yet introduced:** closures in depth, `Box<dyn Trait>`, async.
 
 **Project 1 status:** Complete.
-**Project 2 status:** In progress. Modules extracted. Tests added.
+**Project 2 status:** Complete. Modules extracted, tests added, `--group-by` with HashMap implemented.
 
 ## Notes & Observations
 

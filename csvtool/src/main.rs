@@ -2,7 +2,7 @@ mod config;
 mod filter;
 mod person;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::env;
 
 use config::Config;
@@ -111,12 +111,31 @@ fn run(config: &Config) -> Result<(), String> {
             let cities: HashSet<&str> = people.iter().map(|p| p.city.as_str()).collect();
             println!("city    {} unique values", cities.len());
         }
+    // Else check if groupby was requested
+    } else if let Some(groupby) = &config.groupby {
+        let mut counts: HashMap<String, u32> = HashMap::new();
+        for person in &people {
+            let field = match groupby.as_str() {
+                "name" => person.name.clone(),
+                "age" => person.age.to_string(),
+                "city" => person.city.clone(),
+                "salary" => person.salary.to_string(),
+                _ => return Err(format!("Field {groupby} not found in struct!")),
+            };
+            let entry = counts.entry(field).or_insert(0);
+            *entry += 1;
+        }
+        let mut sorted_counts: Vec<(&String, &u32)> = counts.iter().collect();
+        sorted_counts.sort_by_key(|(entry, _)| entry.as_str());
+        for (entry, count) in sorted_counts {
+            println!("{entry:<20} {count:>3}");
+        }
+    // Else print resulting list
     } else {
-        // Else print resulting list
         println!("{:<20} {:>4} {:<12} {:>8}", "NAME", "AGE", "CITY", "SALARY");
         println!("{}", "-".repeat(52));
 
-        for person in people {
+        for person in &people {
             println!("{}", person)
         }
     }

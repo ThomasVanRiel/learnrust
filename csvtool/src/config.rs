@@ -5,6 +5,7 @@ pub struct Config {
     pub filters: Vec<(String, FilterOp, String)>,
     pub sort: Option<String>,
     pub limit: Option<usize>,
+    pub groupby: Option<String>,
     pub stats: bool,
 }
 
@@ -66,7 +67,7 @@ impl Config {
             if let Some(sort_key) = args.get(pos + 1) {
                 Some(sort_key.to_string())
             } else {
-                println!("--sort flag specified but no key provided.");
+                println!("--sort flag specified but no field provided.");
                 None
             }
         } else {
@@ -80,19 +81,32 @@ impl Config {
                     format!("Error: {e} while parsing string \"{limit_string}\" to usize")
                 })?)
             } else {
-                println!("--limit flag specified but no amount specified.");
+                println!("--limit flag specified but no amount provided.");
                 None
             }
         } else {
             None
         };
 
-        match (filename, filters, sort, limit, has_stats_flag) {
-            (Some(filename), filters, sort, limit, stats) => Ok(Config {
+        // Check if group-by flag is in args and get key
+        let groupby = if let Some(pos) = args.iter().position(|a| a.eq("--group-by")) {
+            if let Some(groupby_string) = args.get(pos + 1) {
+                Some(groupby_string.to_string())
+            } else {
+                println!("--group-by flag specified but no field provided.");
+                None
+            }
+        } else {
+            None
+        };
+
+        match (filename, filters, sort, limit, groupby, has_stats_flag) {
+            (Some(filename), filters, sort, limit, groupby, stats) => Ok(Config {
                 filename: filename.to_string(),
                 filters,
                 sort,
                 limit,
+                groupby,
                 stats,
             }),
             _ => Err(String::from(
