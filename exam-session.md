@@ -1,20 +1,22 @@
-# Exam Session — 2026-02-25
+# Exam Session — 2026-02-25 / 2026-02-26
 
 Progress through `exam.md` question by question.
 
 ---
 
-## Intermediary Grade (Parts 1–2 completed)
+## Intermediary Grade (Parts 1–3 completed)
 
 | Part | Score |
 |---|---|
 | Part 1 — Concepts (8 scored, 2 deferred) | ~60% |
 | Part 2 — Code Reading | ~84% |
-| **Overall** | **~72%** |
+| Part 3 — Fill in the Blank | ~83% |
+| **Overall** | **~75%** |
 
-**Strengths:** iterators, collect, retain, move semantics in practice — applied well under pressure.
-**Weak spots:** ownership rules wording, `?` vs `.unwrap()`, Copy/non-Copy reasoning (size vs heap ownership).
+**Strengths:** iterators, collect, retain, move semantics in practice — applied well under pressure. Strong on trait syntax, match arms, generics bounds.
+**Weak spots:** ownership rules wording, `?` vs `.unwrap()`, Copy/non-Copy reasoning (size vs heap ownership). Missing `f` and `self.` in `write!`, missing `.clone()` when indexing a borrowed slice.
 **Deferred:** static vs dynamic dispatch (Q1.6), Ord vs PartialOrd (Q1.7) — neither has been used in a project yet.
+**Stopped:** end of Part 3. Parts 4–6 not yet attempted.
 
 ---
 
@@ -228,6 +230,69 @@ No bug spotted. Noted that returning `&str` of string literals is safe because t
 **Feedback:** Second half correct. First half (why `mod foo;` maps to `src/foo.rs`) not addressed. The answer: it's a compiler convention — `mod foo;` tells the compiler to load the module body from `src/foo.rs` or `src/foo/mod.rs`. Key insight: file system layout does not define the module tree; `mod` declarations do. Two files in the same folder are not in the same scope unless one declares `mod` for the other.
 
 **Score: 1/2**
+
+---
+
+## Part 3 — Fill in the Blank
+
+### Q3.1 — Borrow a Vec parameter
+
+**Thomas's answer:**
+`Vec<&i32>` (incorrect). After discussion: `&Vec<i32>`.
+
+**Feedback:** `Vec<&i32>` is a Vec *containing* references — different type entirely. The fix is to borrow the Vec itself: `items: &Vec<i32>`. Body doesn't change. Also noted: `args[1]` on a `&[String]` would require `.clone()` since you can't move out of a borrowed slice.
+
+**Score: partial** — right direction, wrong syntax initially.
+
+---
+
+### Q3.2 — `impl Display` for `Point`
+
+**Thomas's answer:**
+`write!("({:.1}, {:.1}", x, y);`
+
+**Correct answer:**
+`write!(f, "({:.1}, {:.1})", self.x, self.y)`
+
+**Feedback:** Format string correct. Missing: `f` as first arg, `self.` prefix, closing `)` in format string, no semicolon (implicit return).
+
+**Score: partial**
+
+---
+
+### Q3.3 — `match` on `Option<String>`
+
+**Thomas's answer:**
+`Some(s)` and `None`. Also asked if `_` is valid when all variants covered — yes, but compiler warns it's unreachable.
+
+**Score: 3/3**
+
+---
+
+### Q3.4 — `Config::new()` guard + fields
+
+**Thomas's answer:**
+`args.len() < 3`, `args[1]`, `args[2]`. Correctly noted arg[0] is the program name, and direct indexing is valid after the guard.
+
+**Score: 3/3** (note: `.clone()` needed in practice, not penalised here)
+
+---
+
+### Q3.5 — Generic bound for `largest`
+
+**Thomas's answer:**
+`T: Ord`. Reasoning: items need total ordering, `PartialOrd` not sufficient because of `NaN`.
+
+**Score: 3/3**
+
+---
+
+### Q3.6 — Test module boilerplate
+
+**Thomas's answer:**
+`use super::*` and `5`.
+
+**Score: 3/3**
 
 ---
 
