@@ -22,9 +22,10 @@
 **Concepts:** iterators, generics, serde, file I/O, testing.
 **Status:** Complete. Modules extracted, tests added, `--group-by` with `HashMap` implemented. Moving to lifetimes session then Project 3.
 
-### Project 3: Web API (TBD)
+### Project 3: `todo-api` — REST API
 
-**Concepts:** async Rust, tokio, axum/actix, database access.
+**Concepts:** async Rust, tokio, axum, serde_json, sqlx, SQLite.
+**Status:** Planning complete. Stack chosen: tokio + axum + sqlx + SQLite. See [project3.md](project3.md).
 
 ### Project 4: Systems-level project (TBD)
 
@@ -52,6 +53,18 @@
 - Deep dive on stack vs heap, ownership (three rules), borrowing (`&T` vs `&mut T`), `String` vs `&str`.
 - Completed Steps 1-2 of the incremental plan.
 - See [class01.md](class01.md) for full notes.
+
+### Class 10 — 2026-02-28
+
+- Project 3 introduced: todo REST API (GET/POST/PUT/DELETE /todos).
+- Stack chosen: tokio (async runtime) + axum (web framework) + serde_json + sqlx + SQLite.
+- Async Rust introduced: Futures, lazy evaluation, `.await`, cooperative multitasking.
+- `#[tokio::main]` — macro that bootstraps the tokio runtime for `main`.
+- Rust has async syntax but no built-in runtime — tokio provides the runtime.
+- Async vs threads: async is I/O-bound (cheap tasks, cooperative), threads are CPU-bound (expensive, preemptive).
+- Axum concepts previewed: handlers, extractors (`Path`, `Json`, `State`), `Router`, `with_state`.
+- sqlx concepts previewed: `query_as!` macro, compile-time SQL checking, connection pools.
+- See [project3.md](project3.md) for full project reference.
 
 ### Class 09 — 2026-02-28
 
@@ -213,6 +226,7 @@
 - [Class 07](class07.md) — Modules, visibility, pub, crate:: vs super::, unit tests
 - [Class 08](class08.md) — HashMap, entry API, BTreeMap, sorting, NLL, --group-by feature
 - [Class 09](class09.md) — Lifetimes, elision, explicit annotations, structs with references
+- [Class 10](project3.md) — Project 3 kickoff, async Rust, tokio, axum, sqlx overview
 
 ## Project 1 Incremental Plan
 
