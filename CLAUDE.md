@@ -54,6 +54,22 @@
 - Completed Steps 1-2 of the incremental plan.
 - See [class01.md](class01.md) for full notes.
 
+### Class 11 — 2026-03-03
+
+- Created `todo-api` project, added tokio + axum + serde dependencies.
+- Ran minimal axum Hello World server — `cargo run`, tested with `curl`.
+- Clarified `.await` — suspends the task, thread stays free (not "pauses the program").
+- Axum vs Tokio: axum is the web layer, tokio is the async runtime/engine.
+- Tokio use cases beyond web: HTTP clients, DB, file I/O, TCP servers, message queues, CLI fan-out.
+- Futures deep dive: `Future` trait, `poll()`, `Poll::Ready`/`Poll::Pending`, state machines.
+- Futures are lazy — calling an async fn does nothing until `.await` or `spawn`.
+- Tokio internals: thread pool, event loop, epoll/kqueue, no busy-waiting.
+- async vs threads demo: `tokio::time::sleep` (concurrent, ~1s) vs `std::thread::sleep` (blocking, ~3s).
+- Core rule: never call blocking functions inside async code — use tokio:: equivalents.
+- When not to use async: CPU-bound work → threads or rayon instead.
+- `tokio::task::spawn_blocking` — escape hatch for blocking code inside async.
+- See [class11.md](class11.md) for full notes.
+
 ### Class 10 — 2026-02-28
 
 - Project 3 introduced: todo REST API (GET/POST/PUT/DELETE /todos).
@@ -227,6 +243,7 @@
 - [Class 08](class08.md) — HashMap, entry API, BTreeMap, sorting, NLL, --group-by feature
 - [Class 09](class09.md) — Lifetimes, elision, explicit annotations, structs with references
 - [Class 10](project3.md) — Project 3 kickoff, async Rust, tokio, axum, sqlx overview
+- [Class 11](class11.md) — Hello World server, Futures deep dive, Tokio internals, async vs threads
 
 ## Project 1 Incremental Plan
 
