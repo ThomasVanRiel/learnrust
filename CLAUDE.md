@@ -52,7 +52,7 @@
 - Combined CLI args + file reading with `fs::read_to_string()`, `.expect()`.
 - Deep dive on stack vs heap, ownership (three rules), borrowing (`&T` vs `&mut T`), `String` vs `&str`.
 - Completed Steps 1-2 of the incremental plan.
-- See [class01.md](class01.md) for full notes.
+- See [class01.md](classnotes/class01.md) for full notes.
 
 ### Class 11 — 2026-03-03
 
@@ -68,7 +68,7 @@
 - Core rule: never call blocking functions inside async code — use tokio:: equivalents.
 - When not to use async: CPU-bound work → threads or rayon instead.
 - `tokio::task::spawn_blocking` — escape hatch for blocking code inside async.
-- See [class11.md](class11.md) for full notes.
+- See [class11.md](classnotes/class11.md) for full notes.
 
 ### Class 10 — 2026-02-28
 
@@ -93,7 +93,7 @@
 - Lifetimes in structs: `struct Config<'a> { query: &'a str }` — struct can't outlive what it borrows.
 - Practical rule: own data in structs (`String` not `&str`), use references in functions. Lifetime-annotated structs are uncommon in real Rust.
 - Lifetimes are compile-time only — zero assembly generated.
-- See [class09.md](class09.md) for full notes.
+- See [class09.md](classnotes/class09.md) for full notes.
 
 ### Class 08 — 2026-02-28
 
@@ -106,7 +106,7 @@
 - Immutable borrows lock mutation: holding `&` refs into a collection prevents `&mut` for the borrow's duration.
 - Non-Lexical Lifetimes (NLL): borrows end at last use, not closing brace.
 - Added `--group-by <field>` feature to csvtool.
-- See [class08.md](class08.md) for full notes.
+- See [class08.md](classnotes/class08.md) for full notes.
 
 ### Class 07 — 2026-02-25
 
@@ -119,7 +119,7 @@
 - `cargo test <substring>` — runs matching tests. Full path shown: `filter::tests::fn_name`.
 - Nested test modules for grouping: `use super::super::*` to reach two levels up.
 - `use super::*` idiomatic in tests; `use crate::...` idiomatic everywhere else.
-- See [class07.md](class07.md) for full notes.
+- See [class07.md](classnotes/class07.md) for full notes.
 
 ### Class 06 — 2026-02-25
 
@@ -148,7 +148,7 @@
 - Multi-filter `retain()`: loop over filters, call `retain()` once per filter — achieves AND logic, each pass narrows the vec.
 - `.all()` — returns `true` if closure returns `true` for every element, short-circuits on first `false`. Mirror of `.any()`.
 - `.zip()` — pairs two iterators element-by-element into tuples.
-- See [class06.md](class06.md) for full notes.
+- See [class06.md](classnotes/class06.md) for full notes.
 
 ### Class 05 — 2026-02-23
 
@@ -166,7 +166,7 @@
 - `format!()` macro — builds an owned `String` like `println!` but returns it instead of printing.
 - `main()` wired up with `match Config::new()` and `if let Err(error) = run(&config)`.
 - `()` unit type — success value when a function has nothing meaningful to return.
-- See [class05.md](class05.md) for full notes.
+- See [class05.md](classnotes/class05.md) for full notes.
 
 ### Class 04 — 2026-02-22
 
@@ -179,7 +179,7 @@
 - Turbofish syntax `::<T>` — explicitly specifying generic types when inference isn't enough.
 - `String::from()` vs `.to_string()` — `.to_string()` works on any `Display` type, `String::from()` only on `&str`.
 - Teased next step: inequality operators (`>`, `<`, `>=`, `<=`) → will need a custom `FilterOp` enum and updated `Config` struct.
-- See [class04.md](class04.md) for full notes.
+- See [class04.md](classnotes/class04.md) for full notes.
 
 ### Class 03 — 2026-02-20
 
@@ -202,7 +202,7 @@
 - Field init shorthand: `filter,` instead of `filter: filter,` (same as JS/ES6).
 - Early `return` from functions: `return Err(...)` to exit before the final expression.
 - `Config::new()` is fully written but not yet wired into `main()` — next step.
-- See [class03.md](class03.md) for full notes.
+- See [class03.md](classnotes/class03.md) for full notes.
 
 ### Class 02 — 2026-02-18
 
@@ -225,7 +225,7 @@
 - Step 6: defined custom `SearchMode` enum, added `-i` flag support.
 - Taught iterator chains: `.iter()`, `.any()`, `.skip()`, `.filter()`, `.collect()`.
 - Closures introduced via iterator methods (`|a| a == "-i"`).
-- See [class02.md](class02.md) for full notes.
+- See [class02.md](classnotes/class02.md) for full notes.
 
 ## Reference Sheets
 
@@ -233,17 +233,17 @@
 
 ## Class Notes Index
 
-- [Class 01](class01.md) — Setup, tooling, Project 1 kickoff
-- [Class 02](class02.md) — Result, Option, match, error handling
-- [Class 03](class03.md) — Project 2 kickoff, csv crate, serde, Config struct, Option patterns
-- [Class 04](class04.md) — Config wired into main, filter logic, match on String, parse, turbofish
-- [Class 05](class05.md) — FilterOp enum, generics, for loops, str::find, string slicing, bug fix
-- [Class 06](class06.md) — Traits, Display, collect into Result<Vec>, retain, sort_by, map_err
-- [Class 07](class07.md) — Modules, visibility, pub, crate:: vs super::, unit tests
-- [Class 08](class08.md) — HashMap, entry API, BTreeMap, sorting, NLL, --group-by feature
-- [Class 09](class09.md) — Lifetimes, elision, explicit annotations, structs with references
+- [Class 01](classnotes/class01.md) — Setup, tooling, Project 1 kickoff
+- [Class 02](classnotes/class02.md) — Result, Option, match, error handling
+- [Class 03](classnotes/class03.md) — Project 2 kickoff, csv crate, serde, Config struct, Option patterns
+- [Class 04](classnotes/class04.md) — Config wired into main, filter logic, match on String, parse, turbofish
+- [Class 05](classnotes/class05.md) — FilterOp enum, generics, for loops, str::find, string slicing, bug fix
+- [Class 06](classnotes/class06.md) — Traits, Display, collect into Result<Vec>, retain, sort_by, map_err
+- [Class 07](classnotes/class07.md) — Modules, visibility, pub, crate:: vs super::, unit tests
+- [Class 08](classnotes/class08.md) — HashMap, entry API, BTreeMap, sorting, NLL, --group-by feature
+- [Class 09](classnotes/class09.md) — Lifetimes, elision, explicit annotations, structs with references
 - [Class 10](project3.md) — Project 3 kickoff, async Rust, tokio, axum, sqlx overview
-- [Class 11](class11.md) — Hello World server, Futures deep dive, Tokio internals, async vs threads
+- [Class 11](classnotes/class11.md) — Hello World server, Futures deep dive, Tokio internals, async vs threads
 
 ## Project 1 Incremental Plan
 

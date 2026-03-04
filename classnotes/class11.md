@@ -229,12 +229,193 @@ You'll see this in practice with sqlx and some other libraries.
 
 ---
 
+## How futures propagate up the call stack
+
+When you `.await` inside an async fn, you're not resolving it yourself — you're saying "poll this, and if it's `Pending`, suspend *me* too." The suspension bubbles up the call stack:
+
+```rust
+async fn inner() -> String {
+    tokio::time::sleep(Duration::from_secs(1)).await;  // suspends inner
+    "done".to_string()
+}
+
+async fn outer() -> String {
+    inner().await   // suspends outer while inner is pending
+}
+
+#[tokio::main]
+async fn main() {
+    outer().await   // suspends main while outer is pending
+}
+```
+
+Each `.await` wraps the caller's state machine around the callee's. When `sleep` is `Pending`, `inner` is `Pending`, so `outer` is `Pending`, so `main` is `Pending`.
+
+The chain ends at **Tokio** — which is not async itself. It's regular synchronous code running an event loop that calls `.poll()`:
+
+```
+Tokio polls main
+  → main polls outer
+    → outer polls inner
+      → inner polls sleep
+        → sleep asks OS to notify when 1s is up → returns Pending
+      ← inner returns Pending
+    ← outer returns Pending
+  ← main returns Pending
+← Tokio parks the task, moves on to other work
+
+[1 second later, OS wakes Tokio]
+
+Tokio polls main again → chain resolves bottom-up
+```
+
+`#[tokio::main]` is the transition from async back to sync — it calls `runtime.block_on(main())`, a regular blocking call that drives everything above it.
+
+---
+
+## Sequential vs concurrent — the key distinction
+
+A single chain of `.await`s is always **sequential** — top to bottom, in order:
+
+```rust
+async fn handler() {
+    let a = step_a().await;  // always runs first
+    let b = step_b().await;  // always runs second
+    let c = step_c().await;  // always runs third
+}
+```
+
+While `handler` is suspended on `step_a`, it cannot run `step_b` — it has no knowledge of other work.
+
+**Concurrency comes from `tokio::spawn`.** Spawn creates an independent task that Tokio tracks alongside all others. At every `.await` where a task goes `Pending`, Tokio pulls the next ready task from the queue:
+
+```
+Tokio queue: [main, t1, t2, t3]
+
+poll t1 → hits sleep → Pending → park t1
+poll t2 → hits sleep → Pending → park t2
+poll t3 → hits sleep → Pending → park t3
+poll main → hits t1.await → Pending → park main
+
+[OS: 1 second elapsed, all sleeps done]
+
+wake t1, t2, t3, main → all go back in queue
+poll t1 → Ready ...
+```
+
+**The compiler doesn't know which tasks to run while waiting — Tokio does, at runtime**, by maintaining a queue of all spawned tasks and running whichever ones are ready.
+
+For your API: when two users hit `GET /todos` at the same time, axum spawns a handler task for each request. While handler 1 waits on a DB query, Tokio runs handler 2. Neither blocks the other.
+
+---
+
+## `tokio::join!` vs `tokio::spawn`
+
+Both run things concurrently, but differ in ownership and lifetime:
+
+**`tokio::join!`** — runs futures concurrently inside the current task. Waits for all before continuing. Not independent — if one panics, everything stops.
+
+```rust
+async fn handler() {
+    let (users, todos) = tokio::join!(
+        fetch_users(),
+        fetch_todos(),
+    );
+    // both done here, use the results
+}
+```
+
+**`tokio::spawn`** — creates a fully independent task. Runs detached from the caller. Caller can move on; task lives until it finishes.
+
+```rust
+async fn main() {
+    let handle = tokio::spawn(background_job());
+
+    do_other_stuff().await;  // runs while background_job is also running
+
+    handle.await.unwrap();   // wait for it later, or never
+}
+```
+
+| | `join!` | `spawn` |
+|---|---|---|
+| Scope | Inside current task | Independent task |
+| Results | Returns all at once | Via `JoinHandle.await` |
+| Lifetime | Tied to current task | Lives independently |
+| Overhead | Zero | Small (new task allocation) |
+| Use when | You need all results before continuing | Fire-and-forget, or truly independent work |
+
+---
+
+## `spawn` is eager — the exception to laziness
+
+- **`async fn` / `Future`** — lazy. Nothing runs until polled.
+- **`tokio::spawn`** — eager. Hands the future to Tokio immediately. Starts running right away, whether or not you ever `.await` the handle.
+
+```rust
+let handle = tokio::spawn(background_job());
+// background_job is ALREADY running here
+
+do_other_stuff().await;  // runs concurrently with background_job
+
+handle.await.unwrap();   // just collects the result — work was already in progress
+```
+
+You can even drop the handle — the task keeps running:
+
+```rust
+tokio::spawn(background_job());  // fire and forget
+```
+
+Mental model:
+
+```
+Future alone     →  lazy, inert, nothing happens
+.await on it     →  poll it now, suspend me if Pending
+tokio::spawn     →  hand to Tokio, starts immediately, runs independently
+```
+
+---
+
+## Concurrent vs parallel
+
+- **Concurrent** — making progress on multiple things by interleaving them, possibly on one thread
+- **Parallel** — literally running at the same time on multiple CPU cores
+
+Spawned tasks are concurrent by default. Tokio *may* run them in parallel across threads, but it's not guaranteed. The distinction matters for CPU-bound work (parallel helps) vs I/O-bound work (concurrent is enough).
+
+---
+
+## The async runtime ecosystem
+
+Tokio is the dominant runtime but not the only one:
+
+| Runtime | Notes |
+|---|---|
+| **Tokio** | De facto standard. Largest ecosystem, most crates target it. Use this. |
+| **async-std** | Tried to mirror `std` with async versions. Lost momentum, mostly inactive. |
+| **smol** | Minimal, lightweight. Used in constrained environments. |
+| **Embassy** | Async for microcontrollers — no OS, no heap. Completely different world. |
+
+The reason multiple runtimes exist: async/await is in the language, but the runtime is not — Rust deliberately left that as a library concern. The `Future` trait is in `std`, so any runtime can poll any future.
+
+In practice the ecosystem has converged on Tokio. Major crates (`axum`, `reqwest`, `sqlx`, `tonic`) all target it. Use anything else and most of the ecosystem won't work.
+
+Some libraries are **runtime-agnostic** — they only use the `Future` trait without depending on Tokio directly. But they're the minority.
+
+---
+
 ## Key takeaways
 
 - `async fn` → compiler generates a `Future` (state machine)
 - Futures are **lazy** — nothing runs until polled
 - `.await` → suspend task if `Pending`, resume when ready (thread stays free)
+- Suspended futures bubble up the call stack — Tokio drives the outermost one
 - **Tokio** = the runtime that polls futures and manages the thread pool
 - **Axum** = web framework built on top of Tokio
+- A single chain of `.await`s is always sequential — concurrency requires `spawn`
+- `spawn` is eager — task starts immediately, handle is just for collecting results
+- `join!` = concurrent within one task; `spawn` = independent task
 - Never block a Tokio thread — use async I/O or `spawn_blocking`
 - CPU-bound work → threads or rayon, not async
+- Tokio is the de facto standard runtime — the ecosystem is built around it
