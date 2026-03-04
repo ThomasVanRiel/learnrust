@@ -54,6 +54,23 @@
 - Completed Steps 1-2 of the incremental plan.
 - See [class01.md](classnotes/class01.md) for full notes.
 
+### Class 12 — 2026-03-04
+
+- Completed Step 2: in-memory todo API, all 5 routes working (GET/POST/PUT/DELETE).
+- Walked through code annotations — corrected and explained each one.
+- `Arc<Mutex<Vec<Todo>>>` — Arc for shared ownership across threads, Mutex for mutual exclusion.
+- `#[derive(...)]` generates trait implementations, not just methods.
+- `type Db = ...` is a type alias — purely cosmetic, no new type created.
+- Axum extractors are not positional — populated by type, order doesn't matter.
+- `.lock()` returns `MutexGuard` — holds lock for its lifetime, releases on drop.
+- Mutex poisoning — only fails if another thread panicked while holding the lock.
+- Clone in `list_todos` is to escape the lock scope, not because `db` is read-only.
+- `IntoResponse` — axum converts `Result<T, E>`, tuples, `StatusCode`, `Json<T>` automatically.
+- Axum uses compile-time trait system, not runtime reflection — errors caught at compile time.
+- Axum → hyper → Tokio TCP stack explained.
+- Combining axum (HTTP) + raw `TcpListener` (streaming) in one app on one Tokio runtime.
+- See [class12.md](classnotes/class12.md) for full notes.
+
 ### Class 11 — 2026-03-03
 
 - Created `todo-api` project, added tokio + axum + serde dependencies.
@@ -244,6 +261,7 @@
 - [Class 09](classnotes/class09.md) — Lifetimes, elision, explicit annotations, structs with references
 - [Class 10](project3.md) — Project 3 kickoff, async Rust, tokio, axum, sqlx overview
 - [Class 11](classnotes/class11.md) — Hello World server, Futures deep dive, Tokio internals, async vs threads
+- [Class 12](classnotes/class12.md) — In-memory todo API, Arc/Mutex, axum extractors, compile-time traits, combining Tokio TCP + Axum
 
 ## Project 1 Incremental Plan
 
