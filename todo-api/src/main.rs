@@ -5,20 +5,19 @@ use axum::{
     routing::get,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use std::str::FromStr;
 
 // Data model
 // ! Let the compile generate debug, clone, (de)serialize methods.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Todo {
-    id: u64,
+    id: i64,
     title: String,
     done: bool,
 }
 
 // Shared state
-// ! Define a new type for shorthand notation later
 type Db = SqlitePool;
 
 // Main function
@@ -30,7 +29,7 @@ async fn main() -> Result<(), sqlx::Error> {
     let pool: Db = SqlitePool::connect_with(opts).await?;
     // Just check it the table exists or create one, we don't care about the result
     let _ = sqlx::query(
-        "CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY, title TEXT, done BOOL)",
+        "CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY, title TEXT NOT NULL, done BOOL NOT NULL)",
     )
     .execute(&pool)
     .await;
@@ -53,31 +52,78 @@ async fn main() -> Result<(), sqlx::Error> {
 }
 
 // Handlers
-async fn list_todos(State(db): State<Db>) -> Json<Vec<Todo>> {
-    todo!();
+async fn list_todos(State(pool): State<Db>) -> Json<Vec<Todo>> {
+    let todos: Vec<Todo> = sqlx::query_as!(Todo, "SELECT * FROM todos")
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+    Json(todos)
 }
 
 async fn create_todo(
-    State(db): State<Db>,
+    State(pool): State<Db>,
     Json(payload): Json<serde_json::Value>,
 ) -> (StatusCode, Json<Todo>) {
-    todo!();
+    let title = payload["title"].as_str().unwrap_or("untitled").to_string();
+    let todo: Todo = sqlx::query_as!(
+        Todo,
+        "INSERT INTO todos (title, done) VALUES (?, false) RETURNING *",
+        title
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    (StatusCode::CREATED, Json(todo))
 }
 
+async fn find_todo(pool: &Db, id: i64) -> Option<Todo> {
+    sqlx::query_as!(Todo, "SELECT * from todos WHERE id = ?", id)
+        .fetch_one(pool)
+        .await
+        .ok()
+}
 // ? Why does this function return Result<> while create returns tuple? Is it because GET must
 // return something while POST does not? Is the Err unwrapped by axum?
-async fn get_todo(State(db): State<Db>, Path(id): Path<u64>) -> Result<Json<Todo>, StatusCode> {
-    todo!();
+async fn get_todo(State(pool): State<Db>, Path(id): Path<i64>) -> Result<Json<Todo>, StatusCode> {
+    find_todo(&pool, id)
+        .await
+        .map(Json)
+        .ok_or(StatusCode::NOT_FOUND)
 }
 
 async fn update_todo(
-    State(db): State<Db>,
-    Path(id): Path<u64>,
+    State(pool): State<Db>,
+    Path(id): Path<i64>,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<Todo>, StatusCode> {
-    todo!();
+    let todo = find_todo(&pool, id).await.ok_or(StatusCode::NOT_FOUND)?;
+    let title = payload["title"].as_str().unwrap_or(&todo.title);
+    let done = payload["done"].as_bool().unwrap_or(todo.done);
+    sqlx::query_as!(
+        Todo,
+        "UPDATE todos SET title = ?, done = ? WHERE id = ? RETURNING *",
+        title,
+        done,
+        id,
+    )
+    .fetch_one(&pool)
+    .await
+    .map(Json)
+    .map_err(|_| StatusCode::NOT_FOUND)
 }
 
-async fn delete_todo(State(db): State<Db>, Path(id): Path<u64>) -> StatusCode {
-    todo!();
+async fn delete_todo(State(pool): State<Db>, Path(id): Path<i64>) -> StatusCode {
+    match sqlx::query!("DELETE FROM todos WHERE id = ?", id)
+        .execute(&pool)
+        .await
+    {
+        Ok(result) => {
+            if result.rows_affected() > 0 {
+                StatusCode::NO_CONTENT
+            } else {
+                StatusCode::NOT_FOUND
+            }
+        }
+        Err(_) => StatusCode::NOT_FOUND,
+    }
 }

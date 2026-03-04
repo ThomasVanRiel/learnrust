@@ -54,6 +54,22 @@
 - Completed Steps 1-2 of the incremental plan.
 - See [class01.md](classnotes/class01.md) for full notes.
 
+### Class 13 — 2026-03-04
+
+- Replaced in-memory `Vec` with SQLite via sqlx.
+- `SqliteConnectOptions` with `create_if_missing(true)` — creates DB file if absent.
+- `SqlitePool` replaces `Arc<Mutex<Vec<Todo>>>` — already thread-safe, no wrapping needed.
+- `DATABASE_URL` in `.env` required for compile-time SQL checking.
+- `query_as!(Struct, SQL, args)` — maps rows to structs, types must match SQLite defaults (`INTEGER` → `i64`).
+- `NOT NULL` in schema → non-optional Rust types. Nullable columns → `Option<T>`.
+- `RETURNING *` — get inserted/updated row back without a second query.
+- `query!` for statements without row results (DELETE). `rows_affected()` to detect missing rows.
+- Extracted `find_todo` helper — reused by `get_todo` and `update_todo`.
+- `.ok()` on `Result` converts to `Option`, discarding the error.
+- SQL injection — never use `format!()` for queries, always use `?` placeholders.
+- `2>&1` in shell — redirects stderr to stdout so compiler errors can be piped.
+- See [class13.md](classnotes/class13.md) for full notes.
+
 ### Class 12 — 2026-03-04
 
 - Completed Step 2: in-memory todo API, all 5 routes working (GET/POST/PUT/DELETE).
@@ -262,6 +278,7 @@
 - [Class 10](project3.md) — Project 3 kickoff, async Rust, tokio, axum, sqlx overview
 - [Class 11](classnotes/class11.md) — Hello World server, Futures deep dive, Tokio internals, async vs threads
 - [Class 12](classnotes/class12.md) — In-memory todo API, Arc/Mutex, axum extractors, compile-time traits, combining Tokio TCP + Axum
+- [Class 13](classnotes/class13.md) — SQLite persistence, sqlx, query_as!, connection pool, RETURNING, rows_affected
 
 ## Project 1 Incremental Plan
 
