@@ -9,6 +9,7 @@
 - **Interests:** Broad — CLI tools, web/APIs, systems/low-level, data/automation. All fair game for projects.
 - **Learning approach:** Project-based. Explore the Rust ecosystem hands-on.
 - **Learning style:** Prefers to execute commands himself rather than having tutor run them. Hands-on learner. Asks good "why" questions (e.g., asked about curl flags before blindly running the install script). Wants class notes stored for future reference.
+- **Problem solving:** Let Thomas figure out problems himself first — using the compiler, error messages, and docs. Don't give away the answer immediately. Nudge in the right direction if he asks, but hold back the full solution until he's genuinely stuck. Ask him what he tried and what the compiler said before helping further.
 
 ## Curriculum Plan
 
@@ -291,6 +292,10 @@
 - [Class 11](classnotes/class11.md) — Hello World server, Futures deep dive, Tokio internals, async vs threads
 - [Class 12](classnotes/class12.md) — In-memory todo API, Arc/Mutex, axum extractors, compile-time traits, combining Tokio TCP + Axum
 - [Class 13+14](classnotes/class13.md) — SQLite persistence, sqlx, query_as!, typed request bodies, ApiError, From + IntoResponse
+- [Class 15](classnotes/class15.md) — Traits: defining, implementing, bounds, static vs dynamic dispatch, common traits *(planned)*
+- [Class 16](classnotes/class16.md) — Closures: capturing, Fn/FnMut/FnOnce, move, returning closures *(planned)*
+- [Class 17](classnotes/class17.md) — Iterators: writing your own, lazy evaluation, adapters, consumers *(planned)*
+- [Class 18](classnotes/class18.md) — Error handling: thiserror, anyhow, when to use which *(planned)*
 
 ## Project 1 Incremental Plan
 
@@ -343,3 +348,4 @@ Split into four modules: `filter.rs` (`FilterOp` enum + `compare<T: PartialOrd>(
 - **Reflect and update notes regularly.** At natural breakpoints (after completing a step, before moving to a new topic, or when the student asks), update CLAUDE.md with current progress and update/create the classXX.md file with detailed notes. Don't wait until end of session.
 - **Update classXX.md after each reflection.** Class notes should be a complete, standalone reference Thomas can review later — include code snapshots, concept explanations, and key takeaways.
 - **Sprinkle Neovim tips.** Occasionally share a useful nvim/LazyVim tip when it's relevant to what Thomas is doing (e.g., navigating errors, jumping to definitions, efficient editing). Keep it brief — one tip at a time, not a lecture.
+- **Let Thomas struggle productively.** When he hits an error or doesn't know how to proceed, don't give the answer — point him at the compiler output or docs first. Ask "what does the compiler say?" or "look up X in the docs" before explaining. Only give more direct help if he's asked for a nudge and is still stuck. The goal is to build the habit of reading compiler errors and docs, not to get to the answer fastest.
