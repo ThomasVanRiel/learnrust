@@ -25,7 +25,7 @@
 ### Project 3: `todo-api` — REST API
 
 **Concepts:** async Rust, tokio, axum, serde_json, sqlx, SQLite.
-**Status:** Planning complete. Stack chosen: tokio + axum + sqlx + SQLite. See [project3.md](project3.md).
+**Status:** Complete. All 5 routes working with SQLite persistence, typed request bodies, and custom error handling.
 
 ### Project 4: Systems-level project (TBD)
 
@@ -53,6 +53,18 @@
 - Deep dive on stack vs heap, ownership (three rules), borrowing (`&T` vs `&mut T`), `String` vs `&str`.
 - Completed Steps 1-2 of the incremental plan.
 - See [class01.md](classnotes/class01.md) for full notes.
+
+### Class 14 — 2026-03-05
+
+- Typed request bodies: `CreateTodo` and `UpdateTodo` structs replacing `serde_json::Value`.
+- `Json<CreateTodo>` extractor auto-returns 422 on bad input — no manual validation needed.
+- `UpdateTodo` uses `Option<T>` fields — present fields update, absent fields keep current value.
+- Custom `ApiError` enum with `IntoResponse` and `From<sqlx::Error>`.
+- `From` + `?` — bare `?` auto-converts `sqlx::Error` to `ApiError`, no `map_err` needed.
+- `.map(Json)` breaks `?` auto-conversion — split into `let x = query.await?; Ok(Json(x))` instead.
+- Exposing DB error messages to clients is a security concern — log internally, return generic message.
+- Project 3 complete.
+- See [class13.md](classnotes/class13.md) for full notes (classes 13+14 combined).
 
 ### Class 13 — 2026-03-04
 
@@ -278,7 +290,7 @@
 - [Class 10](project3.md) — Project 3 kickoff, async Rust, tokio, axum, sqlx overview
 - [Class 11](classnotes/class11.md) — Hello World server, Futures deep dive, Tokio internals, async vs threads
 - [Class 12](classnotes/class12.md) — In-memory todo API, Arc/Mutex, axum extractors, compile-time traits, combining Tokio TCP + Axum
-- [Class 13](classnotes/class13.md) — SQLite persistence, sqlx, query_as!, connection pool, RETURNING, rows_affected
+- [Class 13+14](classnotes/class13.md) — SQLite persistence, sqlx, query_as!, typed request bodies, ApiError, From + IntoResponse
 
 ## Project 1 Incremental Plan
 

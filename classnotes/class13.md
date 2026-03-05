@@ -1,12 +1,13 @@
-# Class 13 — SQLite persistence with sqlx
+# Class 13 — SQLite persistence, polish, and error handling
 
 ## What we did
 
 - Replaced in-memory `Vec` with SQLite via sqlx
 - Set up connection pool, schema creation, `create_if_missing`
 - Implemented all 5 handlers with real SQL queries
-- Learned sqlx compile-time checking, `query_as!`, `query!`, `RETURNING`
 - Extracted `find_todo` helper to avoid code duplication
+- Added typed request bodies (`CreateTodo`, `UpdateTodo`)
+- Replaced `.unwrap()` with proper `ApiError` type and `From` + `IntoResponse`
 
 ---
 
@@ -17,6 +18,7 @@ use axum::{
     Json, Router,
     extract::{Path, State},
     http::StatusCode,
+    response::{IntoResponse, Response},
     routing::get,
 };
 use serde::{Deserialize, Serialize};
@@ -30,7 +32,40 @@ struct Todo {
     done: bool,
 }
 
+#[derive(Debug, Deserialize)]
+struct CreateTodo {
+    title: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct UpdateTodo {
+    title: Option<String>,
+    done: Option<bool>,
+}
+
 type Db = SqlitePool;
+
+enum ApiError {
+    NotFound,
+    DatabaseError(sqlx::Error),
+}
+
+impl IntoResponse for ApiError {
+    fn into_response(self) -> Response {
+        match self {
+            ApiError::NotFound => StatusCode::NOT_FOUND.into_response(),
+            ApiError::DatabaseError(e) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+            }
+        }
+    }
+}
+
+impl From<sqlx::Error> for ApiError {
+    fn from(error: sqlx::Error) -> ApiError {
+        ApiError::DatabaseError(error)
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), sqlx::Error> {
@@ -61,71 +96,61 @@ async fn find_todo(pool: &Db, id: i64) -> Option<Todo> {
         .ok()
 }
 
-async fn list_todos(State(pool): State<Db>) -> Json<Vec<Todo>> {
-    let todos: Vec<Todo> = sqlx::query_as!(Todo, "SELECT * FROM todos")
+async fn list_todos(State(pool): State<Db>) -> Result<Json<Vec<Todo>>, ApiError> {
+    let todos = sqlx::query_as!(Todo, "SELECT * FROM todos")
         .fetch_all(&pool)
-        .await
-        .unwrap();
-    Json(todos)
+        .await?;
+    Ok(Json(todos))
 }
 
 async fn create_todo(
     State(pool): State<Db>,
-    Json(payload): Json<serde_json::Value>,
-) -> (StatusCode, Json<Todo>) {
-    let title = payload["title"].as_str().unwrap_or("untitled").to_string();
-    let todo: Todo = sqlx::query_as!(
+    Json(payload): Json<CreateTodo>,
+) -> Result<(StatusCode, Json<Todo>), ApiError> {
+    let todo = sqlx::query_as!(
         Todo,
         "INSERT INTO todos (title, done) VALUES (?, false) RETURNING *",
-        title
+        payload.title
     )
     .fetch_one(&pool)
-    .await
-    .unwrap();
-    (StatusCode::CREATED, Json(todo))
+    .await?;
+    Ok((StatusCode::CREATED, Json(todo)))
 }
 
-async fn get_todo(State(pool): State<Db>, Path(id): Path<i64>) -> Result<Json<Todo>, StatusCode> {
+async fn get_todo(State(pool): State<Db>, Path(id): Path<i64>) -> Result<Json<Todo>, ApiError> {
     find_todo(&pool, id)
         .await
         .map(Json)
-        .ok_or(StatusCode::NOT_FOUND)
+        .ok_or(ApiError::NotFound)
 }
 
 async fn update_todo(
     State(pool): State<Db>,
     Path(id): Path<i64>,
-    Json(payload): Json<serde_json::Value>,
-) -> Result<Json<Todo>, StatusCode> {
-    let todo = find_todo(&pool, id).await.ok_or(StatusCode::NOT_FOUND)?;
-    let title = payload["title"].as_str().unwrap_or(&todo.title);
-    let done = payload["done"].as_bool().unwrap_or(todo.done);
-    sqlx::query_as!(
+    Json(payload): Json<UpdateTodo>,
+) -> Result<Json<Todo>, ApiError> {
+    let todo = find_todo(&pool, id).await.ok_or(ApiError::NotFound)?;
+    let title = payload.title.unwrap_or(todo.title);
+    let done = payload.done.unwrap_or(todo.done);
+    let todo = sqlx::query_as!(
         Todo,
         "UPDATE todos SET title = ?, done = ? WHERE id = ? RETURNING *",
-        title,
-        done,
-        id,
+        title, done, id,
     )
     .fetch_one(&pool)
-    .await
-    .map(Json)
-    .map_err(|_| StatusCode::NOT_FOUND)
+    .await?;
+    Ok(Json(todo))
 }
 
-async fn delete_todo(State(pool): State<Db>, Path(id): Path<i64>) -> StatusCode {
-    match sqlx::query!("DELETE FROM todos WHERE id = ?", id)
+async fn delete_todo(State(pool): State<Db>, Path(id): Path<i64>) -> Result<StatusCode, ApiError> {
+    let result = sqlx::query!("DELETE FROM todos WHERE id = ?", id)
         .execute(&pool)
-        .await
-    {
-        Ok(result) => {
-            if result.rows_affected() > 0 {
-                StatusCode::NO_CONTENT
-            } else {
-                StatusCode::NOT_FOUND
-            }
-        }
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        .await?;
+
+    if result.rows_affected() > 0 {
+        Ok(StatusCode::NO_CONTENT)
+    } else {
+        Err(ApiError::NotFound)
     }
 }
 ```
@@ -136,9 +161,8 @@ async fn delete_todo(State(pool): State<Db>, Path(id): Path<i64>) -> StatusCode 
 
 ### sqlx compile-time SQL checking
 
-`query_as!` and `query!` are macros that verify SQL against the real database **at compile time**. Typos in column names, wrong types — caught before the program runs.
+`query_as!` and `query!` verify SQL against the real database **at compile time**. Requires `DATABASE_URL` in a `.env` file at the project root:
 
-Requires `DATABASE_URL` set in a `.env` file at the project root:
 ```
 DATABASE_URL=sqlite://todo.db
 ```
@@ -156,11 +180,9 @@ Without `create_if_missing(true)`, sqlx fails if the file doesn't exist.
 
 ### `SqlitePool` replaces `Arc<Mutex<Vec<Todo>>>`
 
-`SqlitePool` is already internally thread-safe and reference-counted — no need to wrap it in `Arc<Mutex<...>>`. Just clone and pass it around freely. `type Db = SqlitePool` is all you need.
+`SqlitePool` is already internally thread-safe and reference-counted. `type Db = SqlitePool` is all you need — no wrapping required.
 
 ### `query_as!(Struct, "SQL", args...)` — map rows to structs
-
-Maps SQL rows directly to a Rust struct. Field names must match column names exactly. Types must be compatible:
 
 | SQLite type | Rust type (sqlx default) |
 |---|---|
@@ -171,99 +193,132 @@ Maps SQL rows directly to a Rust struct. Field names must match column names exa
 
 Use `NOT NULL` in the schema to get non-optional types. `INTEGER PRIMARY KEY` auto-increments — don't pass `id` on insert.
 
-### `RETURNING *` — get the inserted/updated row back
+### `RETURNING *` — get the row back after insert/update
 
 ```sql
 INSERT INTO todos (title, done) VALUES (?, false) RETURNING *
 UPDATE todos SET title = ?, done = ? WHERE id = ? RETURNING *
 ```
 
-Returns the full row after the operation. No need for a second `SELECT` query.
+No need for a second `SELECT` query.
 
 ### `query!` vs `query_as!`
 
 - `query_as!(Struct, ...)` — maps result rows to a struct
-- `query!(...)` — for queries where you don't need rows back (DELETE, or just checking `rows_affected()`)
+- `query!(...)` — for statements where you don't need rows back (DELETE)
 
 ### `rows_affected()` — detect missing rows on DELETE
 
-`DELETE` succeeds even if no rows matched. Check `rows_affected()` to distinguish "deleted" from "not found":
+`DELETE` succeeds even if no rows matched — check `rows_affected()`:
 
 ```rust
-match sqlx::query!("DELETE FROM todos WHERE id = ?", id)
-    .execute(&pool)
-    .await
-{
-    Ok(result) => {
-        if result.rows_affected() > 0 { StatusCode::NO_CONTENT }
-        else { StatusCode::NOT_FOUND }
+if result.rows_affected() > 0 {
+    Ok(StatusCode::NO_CONTENT)
+} else {
+    Err(ApiError::NotFound)
+}
+```
+
+### Typed request bodies
+
+Instead of `serde_json::Value` + manual field extraction, define structs:
+
+```rust
+#[derive(Debug, Deserialize)]
+struct CreateTodo { title: String }
+
+#[derive(Debug, Deserialize)]
+struct UpdateTodo { title: Option<String>, done: Option<bool> }
+```
+
+Axum's `Json<CreateTodo>` extractor automatically returns 422 if the body doesn't match the struct. Optional fields use `Option<T>`.
+
+### Custom error type with `From` + `IntoResponse`
+
+The idiomatic pattern for API error handling:
+
+```rust
+enum ApiError {
+    NotFound,
+    DatabaseError(sqlx::Error),
+}
+
+// Axum can convert it to a response
+impl IntoResponse for ApiError {
+    fn into_response(self) -> Response {
+        match self {
+            ApiError::NotFound => StatusCode::NOT_FOUND.into_response(),
+            ApiError::DatabaseError(e) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+            }
+        }
     }
-    Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+}
+
+// ? operator auto-converts sqlx::Error → ApiError
+impl From<sqlx::Error> for ApiError {
+    fn from(error: sqlx::Error) -> ApiError {
+        ApiError::DatabaseError(error)
+    }
 }
 ```
 
-### `find_todo` helper — avoid duplication
-
-Both `get_todo` and `update_todo` need to look up a todo by id. Extracting it avoids repeating the query:
+With `From` implemented, bare `?` works everywhere — no `map_err` needed:
 
 ```rust
-async fn find_todo(pool: &Db, id: i64) -> Option<Todo> {
-    sqlx::query_as!(Todo, "SELECT * FROM todos WHERE id = ?", id)
-        .fetch_one(pool)
-        .await
-        .ok()  // converts Result → Option, discarding the error
-}
+let todos = sqlx::query_as!(Todo, "SELECT * FROM todos")
+    .fetch_all(&pool)
+    .await?;  // sqlx::Error auto-converts to ApiError::DatabaseError
 ```
 
-`.ok()` on `Result<T, E>` converts it to `Option<T>` — `Ok(v)` → `Some(v)`, `Err(_)` → `None`.
+### Why `.map(Json)` breaks `?` auto-conversion
 
-### Panic in a handler doesn't kill the server
+```rust
+// Doesn't work — map(Json) leaves Err as sqlx::Error, From never fires
+.await.map(Json)
 
-Each request runs in its own `tokio::spawn`ed task. A panic kills that task (returns 500) but the runtime and other tasks keep running. The server stays up.
+// Works — ? triggers From conversion, then wrap in Json
+let todo = query.await?;
+Ok(Json(todo))
+```
+
+The `?` operator triggers `From`. If you transform the value with `.map()` first, `?` never runs and the error type stays as `sqlx::Error`.
+
+### Exposing DB errors to clients
+
+`e.to_string()` in `DatabaseError` response leaks implementation details. In production: log the error internally, return a generic message to the client.
 
 ### SQL injection — never use `format!()` for queries
 
-Always use `?` placeholders:
 ```rust
-// WRONG — SQL injection risk
+// WRONG
 format!("SELECT * FROM todos WHERE title = '{title}'")
 
-// CORRECT — sqlx escapes the value
+// CORRECT
 sqlx::query_as!(Todo, "SELECT * FROM todos WHERE title = ?", title)
 ```
 
 ### `2>&1` in shell
 
-Redirects stderr to stdout so both are captured together. Compiler errors go to stderr — without this, piping to `head` or `grep` might show nothing.
+Redirects stderr to stdout. Compiler errors go to stderr — without this, piping to `head` or `grep` shows nothing.
 
 ---
 
 ## Test commands
 
 ```bash
-# Create
 curl -X POST http://localhost:3000/todos -H "Content-Type: application/json" -d '{"title": "Buy milk"}' | jq
-
-# List
 curl http://localhost:3000/todos | jq
-
-# Get one
 curl http://localhost:3000/todos/1 | jq
-
-# Update
 curl -X PUT http://localhost:3000/todos/1 -H "Content-Type: application/json" -d '{"done": true}' | jq
-
-# Delete
 curl -X DELETE http://localhost:3000/todos/1
-
-# Delete missing id — should return 404
-curl -X DELETE http://localhost:3000/todos/999
+curl -X DELETE http://localhost:3000/todos/999  # should return 404
 ```
 
-Note: avoid `-s` when debugging — it silences errors. Use `-v` for full verbose output.
+Avoid `-s` when debugging — it silences errors. Use `-v` for verbose output.
 
 ---
 
 ## Next
 
-Step 4: polish — proper error handling (no more `.unwrap()` in handlers), typed request bodies instead of `serde_json::Value`, real 400 responses for bad input.
+Project 3 complete. Next: recap sessions on traits, lifetimes, and other concepts before Project 4.
