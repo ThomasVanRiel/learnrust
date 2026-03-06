@@ -76,6 +76,32 @@ pub trait Renderer {
 - Completed Steps 1-2 of the incremental plan.
 - See [class01.md](classnotes/class01.md) for full notes.
 
+### Class 18 — 2026-03-06
+
+- Error handling patterns: `anyhow`, `thiserror`, when to use which.
+- `anyhow::Result<T>` accepts any error type — `?` works across all error types, no `From` impls needed.
+- `.context()` / `.with_context()` — adds human-readable message layer, preserves full error chain.
+- `thiserror` — `#[error("...")]` generates `Display`, `#[from]` generates `From`. No manual impl blocks.
+- `#[from]` lets `?` auto-convert underlying errors into enum variants.
+- Tradeoff: `anyhow` gives rich context but no matchable variants; `thiserror` gives structured variants but raw error messages.
+- Real projects: `thiserror` for error enums, `anyhow` in application/main code.
+- See [class18.md](classnotes/class18.md) for full notes.
+
+### Class 17 — 2026-03-06
+
+- Iterators: the `Iterator` trait, writing your own, lazy evaluation, adapters, consumers.
+- `Iterator` trait requires only `next()` — all combinators are default methods.
+- Off-by-one trap: increment after capturing the value, not before.
+- `new()` constructor idiom for default starting state — Rust has no default field values.
+- Infinite iterators — always return `Some`, pair with `take(n)` or `take_while`.
+- Fibonacci in Rust — `u32` overflows ~47th term, use `u64`.
+- Lazy evaluation confirmed — adapters do no work until a consumer drives iteration.
+- `(0..)` infinite range with `.filter().take()`.
+- `fold`, `flat_map`, `zip`, `max_by_key` exercises.
+- `.split_whitespace()` preferred over `.split(" ")` for real text.
+- Inclusive ranges: `1..=5` vs `1..5`, works in match patterns too.
+- See [class17.md](classnotes/class17.md) for full notes.
+
 ### Class 16 — 2026-03-06
 
 - Closures: capturing by reference, mutable reference, and move.
@@ -342,8 +368,8 @@ pub trait Renderer {
 - [Class 13+14](classnotes/class13.md) — SQLite persistence, sqlx, query_as!, typed request bodies, ApiError, From + IntoResponse
 - [Class 15](classnotes/class15.md) — Traits deep dive: default impls, `impl Trait`, `From`/`Into`, `Clone`, `Iterator`
 - [Class 16](classnotes/class16.md) — Closures: capturing, `Fn`/`FnMut`/`FnOnce`, `move`, returning closures
-- [Class 17](classnotes/class17.md) — Iterators: writing your own, lazy evaluation, adapters, consumers *(planned)*
-- [Class 18](classnotes/class18.md) — Error handling: thiserror, anyhow, when to use which *(planned)*
+- [Class 17](classnotes/class17.md) — Iterators: writing your own, lazy evaluation, adapters, consumers
+- [Class 18](classnotes/class18.md) — Error handling: `thiserror`, `anyhow`, when to use which
 - [Project 4](chip8.md) — CHIP-8 Emulator: opcode engine, concurrency, pluggable renderer, FFI *(not started)*
 
 ## Project 1 Incremental Plan
@@ -379,6 +405,10 @@ Split into four modules: `filter.rs` (`FilterOp` enum + `compare<T: PartialOrd>(
 **Concepts Thomas has also learned (Class 15):** default trait method implementations, `impl Trait` in argument and return position, `From<T>` / `Into` (auto-implemented), tuple destructuring in function parameters, `Clone` vs `Copy` (explicit vs implicit duplication), custom `Clone` only needed for raw pointers, mutability lives on the binding not the type, `Iterator` trait (`next()` only — all combinators are default methods).
 
 **Concepts Thomas has also learned (Class 16):** closures (capturing by `&`, `&mut`, move), `Fn`/`FnMut`/`FnOnce` traits and hierarchy, `move` closures, E0499 (double mutable borrow of `FnMut`), `thread::spawn` with `move`, returning closures with `impl Fn`, `&str` as `Copy` in `move` closures, generic parameter naming conventions.
+
+**Concepts Thomas has also learned (Class 17):** `Iterator` trait (`next()` only), writing custom iterators, lazy evaluation, infinite iterators, `take`/`take_while`, `fold`, `flat_map`, `zip`, `max_by_key`, inclusive ranges (`1..=5`), `split_whitespace`.
+
+**Concepts Thomas has also learned (Class 18):** `anyhow::Result`, `.context()` / `.with_context()`, `thiserror`, `#[error("...")]`, `#[from]`, when to use `anyhow` vs `thiserror`.
 
 **Concepts not yet introduced:** `Box<dyn Trait>`, async.
 

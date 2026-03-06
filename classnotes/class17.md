@@ -218,13 +218,90 @@ v.into_iter().for_each(|x| println!("{x}")); // v consumed
 
 ---
 
-## Exercises
+## Additional notes from session
 
-1. Implement `Iterator` for a `Fibonacci` struct that yields the Fibonacci sequence
-2. Use `.zip()` to pair names with scores and find the highest scorer
-3. Use `.flat_map()` to split a list of sentences into individual words
-4. Use `.fold()` to compute the product of a list of numbers
-5. Use `.take_while()` to collect numbers from an iterator until one exceeds 10
+### Off-by-one in custom iterators
+
+Increment *after* checking, not before — otherwise the first value is skipped:
+
+```rust
+fn next(&mut self) -> Option<Self::Item> {
+    if self.count < self.max {
+        let val = self.count;
+        self.count += 1;  // increment after capturing val
+        Some(val)
+    } else {
+        None
+    }
+}
+```
+
+### Use a `new()` constructor for default starting state
+
+Rust has no default field values in struct literals. Use an associated function:
+
+```rust
+impl Fibonacci {
+    fn new() -> Self {
+        Fibonacci { current: 0, next: 1 }
+    }
+}
+```
+
+### Infinite iterators
+
+An iterator that always returns `Some` is infinite. Pair with `take(n)` or `take_while(|x| ...)` to terminate:
+
+```rust
+Fibonacci::new().take(10).collect::<Vec<u64>>()
+(0..).filter(|x| x % 3 == 0).take(5).collect::<Vec<_>>()
+```
+
+Watch out for overflow — Fibonacci grows fast. `u32` overflows around the 47th term. Use `u64` for headroom, or `take_while` to stop before overflow.
+
+### Lazy evaluation — nothing runs until consumed
+
+Adapters like `.map()` and `.filter()` return new iterator types — no work happens until a consumer (`.collect()`, `.sum()`, `.for_each()` etc.) drives the iteration:
+
+```rust
+let iter = Counter::new(5)
+    .map(|x| { println!("mapping {x}"); x * 2 })
+    .filter(|x| x > &4);
+// nothing printed yet
+let result: Vec<u32> = iter.collect(); // NOW it runs
+```
+
+Each element passes through the full chain before the next is processed. No intermediate allocations.
+
+### `.zip()` stops at the shorter iterator
+
+If one iterator is longer, the extra elements are silently dropped — no error.
+
+### `.split_whitespace()` vs `.split(" ")`
+
+Prefer `.split_whitespace()` for real text — handles multiple spaces, tabs, newlines. `.split(" ")` only splits on a single literal space.
+
+### Inclusive ranges
+
+`1..=5` includes 5. `1..5` excludes 5. `1..=5` reads more naturally for "1 to 5" and works in match patterns too:
+
+```rust
+match x {
+    1..=5 => println!("small"),
+    _ => println!("large"),
+}
+```
+
+---
+
+## Exercises completed
+
+- `Counter` iterator with `next()`, `.collect()`, `.sum()`, lazy `.map().filter()`
+- Infinite range `(0..)` with `.filter().take()`
+- `Fibonacci` iterator with `new()` constructor, `u64` to avoid overflow
+- `fold` — product of 1..=5
+- `flat_map` — sentences to words
+- `zip` + `max_by_key` — find highest scorer
 
 ---
 
