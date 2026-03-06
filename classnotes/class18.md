@@ -172,4 +172,4 @@ The todo API used a custom type because it needed `IntoResponse` — axum needs 
 
 ## Next
 
-Project 4: Systems-level project — concurrency, unsafe, FFI, performance.
+Project 4: CHIP-8 Emulator — fetch/decode/execute loop, bit manipulation, concurrency (timers), `Box<dyn Renderer>` trait object, minifb renderer, then SDL2 via FFI.

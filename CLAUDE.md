@@ -28,14 +28,35 @@
 **Concepts:** async Rust, tokio, axum, serde_json, sqlx, SQLite.
 **Status:** Complete. All 5 routes working with SQLite persistence, typed request bodies, and custom error handling.
 
-### Project 4: Systems-level project (TBD)
+### Project 4 (Capstone): CHIP-8 Emulator
 
-**Concepts:** concurrency, unsafe, FFI, performance.
+**Status:** Not started — graduation project after completing deep-dive classes 15–18. Thomas has prior experience implementing CHIP-8 in C++ with OpenGL.
 
-### Project 5 (Capstone): Tetris TUI
+**Learning goals:**
+- **Emulation fundamentals:** fetch/decode/execute loop, opcode dispatch via `match`, program counter, stack, registers
+- **Bit manipulation:** masking, shifting, and extracting nibbles from raw bytes — real low-level byte work
+- **Low-level memory:** emulated RAM as `[u8; 4096]`, direct indexing, no abstractions
+- **Enums + pattern matching at scale:** all 35 CHIP-8 opcodes decoded into a Rust enum
+- **Traits + dynamic dispatch:** `Box<dyn Renderer>` — emulator core is renderer-agnostic
+- **Concurrency:** delay and sound timers tick at 60Hz on a separate thread, independent of the CPU loop
+- **FFI:** SDL2 renderer as a second backend after minifb — real-world C library interop
+- **Testing:** `NullRenderer` for headless opcode unit tests; ROMs as integration tests
+- **Module structure:** clean separation of cpu, memory, display, input, timers, renderer
+- **WebAssembly:** compile to Wasm with `wasm-pack`, expose to JS via `#[wasm_bindgen]`, render to `<canvas>` — deploy to a real website
 
-**Concepts:** everything from Projects 1-4 applied together. TUI rendering (ratatui), input handling (crossterm), game loops, concurrency (timer + input threads), state machines, complex data structures.
-**Status:** Not started — graduation project after completing Projects 2-4.
+**Architecture decision — pluggable renderer:**
+The emulator core holds a `Box<dyn Renderer>` and never depends on a concrete backend. The `Renderer` trait exposes three methods:
+```rust
+pub trait Renderer {
+    fn draw(&mut self, display: &[[bool; 64]; 32]);
+    fn is_running(&self) -> bool;
+    fn pressed_keys(&self) -> Vec<u8>;
+}
+```
+**Phase 1:** `MinifbRenderer` — pure Rust, gets pixels on screen fast.
+**Phase 2:** `Sdl2Renderer` via FFI — Thomas knows SDL2 from C++, real-world FFI exposure in context.
+**Phase 3:** `WasmRenderer` — compile to WebAssembly with `wasm-pack`, render to HTML5 `<canvas>`, deploy to Thomas's website. Emulator core unchanged — only a new renderer impl needed. JS calls `step()` each frame via `requestAnimationFrame`.
+**Testing:** `NullRenderer` — headless, no window, used in unit tests for opcode logic.
 
 ## Session Log
 
@@ -296,6 +317,7 @@
 - [Class 16](classnotes/class16.md) — Closures: capturing, Fn/FnMut/FnOnce, move, returning closures *(planned)*
 - [Class 17](classnotes/class17.md) — Iterators: writing your own, lazy evaluation, adapters, consumers *(planned)*
 - [Class 18](classnotes/class18.md) — Error handling: thiserror, anyhow, when to use which *(planned)*
+- [Project 4](chip8.md) — CHIP-8 Emulator: opcode engine, concurrency, pluggable renderer, FFI *(not started)*
 
 ## Project 1 Incremental Plan
 
