@@ -30,7 +30,11 @@
 
 ### Project 4 (Capstone): CHIP-8 Emulator
 
-**Status:** In progress. Module structure in place, Memory with ROM loading, Display with sprite drawing and collision detection, Cpu with fetch/decode/execute and first 4 opcodes (CLS, JP, LD Vx, ADD Vx). Tests passing. Next: remaining opcodes, then minifb renderer.
+**Status:** In progress. Most opcodes implemented. Next: remaining opcodes (FX07/FX15/FX18 timers, FX0A key wait, FX29 font, FX33 BCD), then minifb renderer to get pixels on screen.
+
+**Opcodes implemented:** CLS, RET, JP, CALL, SE/SNE Vx byte, SE/SNE Vx Vy, LD Vx byte, ADD Vx byte, all 0x8XY_ arithmetic/logic (LD, OR, AND, XOR, ADD, SUB, SHR, SUBN, SHL), JP V0, RND, DRW, ADD I Vx, LD [I] Vx, LD Vx [I].
+
+**Quirk choice:** SHR/SHL use CHIP-48 quirk — shift Vx in place, ignore Vy.
 
 **Learning goals:**
 - **Emulation fundamentals:** fetch/decode/execute loop, opcode dispatch via `match`, program counter, stack, registers
@@ -75,6 +79,21 @@ pub trait Renderer {
 - Deep dive on stack vs heap, ownership (three rules), borrowing (`&T` vs `&mut T`), `String` vs `&str`.
 - Completed Steps 1-2 of the incremental plan.
 - See [class01.md](classnotes/class01.md) for full notes.
+
+### Class 19 — 2026-03-07 (CHIP-8 session 1)
+
+- `Box<dyn Trait>` explained — heap-allocated trait object, equivalent to `std::unique_ptr<Interface>` in C++. Needed because `dyn Trait` is unsized.
+- Module structure created: `cpu`, `memory`, `display`, `input`, `timers`, `renderer`.
+- `Memory` — `[u8; 4096]`, ROM loaded at `0x200`, `copy_from_slice` for bulk copy.
+- `Display` — `[[bool; 64]; 32]`, `draw_sprite` with XOR and collision detection, wrapping with `%`.
+- `Cpu` — fetch (two bytes → u16, big-endian), decode (nibble extraction with `>>` and `& 0xF`), execute (`match` on nibble tuple).
+- Implemented most opcodes. VF flag set with `bool as u8`.
+- `overflowing_add` for ADD with carry flag.
+- Off-by-one bug caught in FX55/FX65 — spec is inclusive of x, ranges need `x + 1`.
+- `{:#X}` for hex formatting with `0x` prefix.
+- `setup()` helper in test module to reduce boilerplate.
+- `as u8` is explicit narrowing — Rust won't silently truncate unlike C++.
+- See chip8 repo for full code.
 
 ### Class 18 — 2026-03-06
 
