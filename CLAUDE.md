@@ -76,6 +76,33 @@ pub trait Renderer {
 - Completed Steps 1-2 of the incremental plan.
 - See [class01.md](classnotes/class01.md) for full notes.
 
+### Class 16 — 2026-03-06
+
+- Closures: capturing by reference, mutable reference, and move.
+- `Fn` / `FnMut` / `FnOnce` — the three closure traits and their hierarchy.
+- `Fn` captures immutably, `FnMut` mutates captures, `FnOnce` consumes captures.
+- `f(f(x))` fails with `FnMut` — two simultaneous `&mut` borrows of `f` (E0499). Fix: `let tmp = f(x); f(tmp)`.
+- `move` required when closure outlives its scope — returning from functions, `thread::spawn`.
+- `Copy` types in `move` closures are silently copied; non-`Copy` types (e.g. `String`) are moved — only one closure can capture them without `.clone()`.
+- `&str` is `Copy` (fat pointer) — multiple closures can capture the same `&str` via `move`, but the closure lifetime is tied to the source string.
+- `thread::spawn` requires `FnOnce` + `move`.
+- Generic type parameters are just naming conventions — `F`, `T`, etc. can be any valid identifier.
+- See [class16.md](classnotes/class16.md) for full notes.
+
+### Class 15 — 2026-03-06
+
+- Traits deep dive: default method implementations, `impl Trait` syntax, `From`/`Into`, `Clone`, `Iterator`.
+- Default implementations — define a method body in the trait; implementors get it free unless they override it.
+- `Iterator` trait — only requires `next()`, all `.map()` / `.filter()` / `.collect()` / `.any()` etc. are default methods on top of it.
+- `impl Trait` in argument position — shorthand for `<T: Trait>`, cleaner for simple cases.
+- `impl Trait` in return position — useful mainly for returning closures (anonymous types with no nameable type).
+- `From<T>` — defines conversion into a type; `Into` is auto-implemented for free. `?` uses `From` under the hood.
+- Tuple destructuring in function parameters: `fn from((r, g, b): (u8, u8, u8))` — type on the whole tuple, destructure the binding.
+- `Clone` vs `Copy` — `Clone` is explicit (`.clone()`), `Copy` is implicit. Custom `Clone` only needed for raw pointers; otherwise `#[derive(Clone)]`.
+- Mutability lives on the binding, not the type — `let mut x` lets you mutate all of `x`'s fields.
+- Scratch project renamed to `class15/`.
+- See [class15.md](classnotes/class15.md) for full notes.
+
 ### Class 14 — 2026-03-05
 
 - Typed request bodies: `CreateTodo` and `UpdateTodo` structs replacing `serde_json::Value`.
@@ -313,8 +340,8 @@ pub trait Renderer {
 - [Class 11](classnotes/class11.md) — Hello World server, Futures deep dive, Tokio internals, async vs threads
 - [Class 12](classnotes/class12.md) — In-memory todo API, Arc/Mutex, axum extractors, compile-time traits, combining Tokio TCP + Axum
 - [Class 13+14](classnotes/class13.md) — SQLite persistence, sqlx, query_as!, typed request bodies, ApiError, From + IntoResponse
-- [Class 15](classnotes/class15.md) — Traits: defining, implementing, bounds, static vs dynamic dispatch, common traits *(planned)*
-- [Class 16](classnotes/class16.md) — Closures: capturing, Fn/FnMut/FnOnce, move, returning closures *(planned)*
+- [Class 15](classnotes/class15.md) — Traits deep dive: default impls, `impl Trait`, `From`/`Into`, `Clone`, `Iterator`
+- [Class 16](classnotes/class16.md) — Closures: capturing, `Fn`/`FnMut`/`FnOnce`, `move`, returning closures
 - [Class 17](classnotes/class17.md) — Iterators: writing your own, lazy evaluation, adapters, consumers *(planned)*
 - [Class 18](classnotes/class18.md) — Error handling: thiserror, anyhow, when to use which *(planned)*
 - [Project 4](chip8.md) — CHIP-8 Emulator: opcode engine, concurrency, pluggable renderer, FFI *(not started)*
@@ -349,7 +376,11 @@ Split into four modules: `filter.rs` (`FilterOp` enum + `compare<T: PartialOrd>(
 
 **Concepts Thomas has also learned (Class 09):** lifetimes (compile-time only, zero runtime cost), lifetime elision, explicit lifetime annotations (`'a`), lifetime parameters in `<>`, `&str` as fat pointer (ptr + len) into existing memory, lifetimes in structs, practical rule (own data in structs).
 
-**Concepts not yet introduced:** closures in depth, `Box<dyn Trait>`, async.
+**Concepts Thomas has also learned (Class 15):** default trait method implementations, `impl Trait` in argument and return position, `From<T>` / `Into` (auto-implemented), tuple destructuring in function parameters, `Clone` vs `Copy` (explicit vs implicit duplication), custom `Clone` only needed for raw pointers, mutability lives on the binding not the type, `Iterator` trait (`next()` only — all combinators are default methods).
+
+**Concepts Thomas has also learned (Class 16):** closures (capturing by `&`, `&mut`, move), `Fn`/`FnMut`/`FnOnce` traits and hierarchy, `move` closures, E0499 (double mutable borrow of `FnMut`), `thread::spawn` with `move`, returning closures with `impl Fn`, `&str` as `Copy` in `move` closures, generic parameter naming conventions.
+
+**Concepts not yet introduced:** `Box<dyn Trait>`, async.
 
 **Project 1 status:** Complete.
 **Project 2 status:** Complete. Modules extracted, tests added, `--group-by` with HashMap implemented.

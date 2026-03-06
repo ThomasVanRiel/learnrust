@@ -148,12 +148,92 @@ Use function pointers when there's nothing to capture. Use closures when you nee
 
 ---
 
-## Exercises
+## Additional notes from session
 
-1. Write a closure that captures a multiplier and returns a function that multiplies its input
-2. Write a function `apply_twice<F: Fn(i32) -> i32>(f: F, x: i32) -> i32`
-3. Use `move` to spawn a thread that prints a captured `String`
-4. Write a function that returns `impl Fn(i32) -> i32`
+### `Fn` vs `FnMut` — what the compiler actually checks
+
+A closure that **reads** captured variables implements `Fn`.
+A closure that **mutates** captured variables implements `FnMut` (but not `Fn`).
+
+```rust
+let name = String::from("Thomas");
+let greet = || println!("{}", name);  // Fn — immutable borrow
+
+let mut count = 0;
+let inc = || { count += 1; };         // FnMut — mutable borrow
+```
+
+Passing a `FnMut` closure where `Fn` is required fails — the closure is too restrictive.
+
+### `f(f(x))` doesn't work with `FnMut`
+
+Calling `f(f(x))` requires two simultaneous `&mut` borrows of `f` — one for the outer call, one to evaluate the argument. That's E0499.
+
+Fix: break into sequential calls:
+
+```rust
+fn apply_twice<F: FnMut(i32) -> i32>(mut f: F, x: i32) -> i32 {
+    let tmp = f(x);
+    f(tmp)
+}
+```
+
+Note `mut f` in the parameter — required to call a `FnMut`.
+
+### `move` is required when a closure outlives its scope
+
+Returning a closure from a function or spawning a thread — the captured variables must be owned by the closure, not borrowed:
+
+```rust
+fn make_multiplier(n: i32) -> impl Fn(i32) -> i32 {
+    move |x| n * x  // n is Copy, so move copies it into the closure
+}
+```
+
+Without `move`, the compiler rejects it because `n` lives in the function's stack frame which is gone after the function returns.
+
+### `Copy` types vs owned types in `move` closures
+
+`i32` is `Copy` — `move` silently copies it. No issue calling the returned closure multiple times or creating multiple closures from the same value.
+
+`String` is not `Copy` — `move` transfers ownership into the first closure. Creating a second closure from the same `String` fails (E0382).
+
+Two solutions:
+- `.clone()` — each closure gets independent owned data. Use when the closure needs to outlive the source.
+- `&str` — `&str` is `Copy` (fat pointer), so `move` copies the reference. Both closures point at the same string. Use when closures stay local and don't outlive the source.
+
+```rust
+fn make_multiplier(n: &str) -> impl Fn(i32) -> String {
+    move |x| format!("{}{}", n, x)  // &str is Copy, both closures work
+}
+
+let double = make_multiplier(name.as_str());
+let triple = make_multiplier(name.as_str());
+```
+
+Tradeoff: the closure's lifetime is tied to `name`. Can't return it or send it to a thread without the string living long enough.
+
+### `thread::spawn` requires `move`
+
+The thread may outlive the spawning scope. `move` transfers ownership so the thread carries its own data:
+
+```rust
+let name = String::from("Thomas");
+let handle = std::thread::spawn(move || {
+    println!("{}", name);
+});
+handle.join().unwrap();
+```
+
+`thread::spawn` requires `FnOnce` — the closure runs exactly once on the new thread.
+
+---
+
+## Exercises completed
+
+- `apply_twice` with `Fn` bound, then `FnMut` — discovered E0499 with `f(f(x))`, fixed with `let tmp`
+- `thread::spawn` with `move` closure capturing a `String`
+- `make_multiplier` returning `impl Fn(i32) -> i32` — explored `i32` (Copy), `String` (move problem), `&str` (Copy reference) variants
 
 ---
 

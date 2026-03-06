@@ -59,4 +59,9 @@ fn main() {
     let mut c2 = c.clone();
     c2.r = 0;
     println!("c: {:?}, c2: {:?}", c, c2);
+
+    let name = String::from("Thomas");
+    let greet = move || println!("{}", name);
+    greet();
+    println!("{}", name);
 }
