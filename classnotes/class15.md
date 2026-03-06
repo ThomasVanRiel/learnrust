@@ -205,13 +205,59 @@ All the methods you've used — `.map()`, `.filter()`, `.collect()`, `.find()`, 
 
 ---
 
-## Exercises
+## Additional notes from session
 
-1. Define a `Shape` trait with an `area() -> f64` method
-2. Implement it for `Circle` (radius) and `Rectangle` (width, height)
-3. Add a default `describe()` method that prints the area
-4. Write a function using static dispatch that prints the area of any shape
-5. Create a `Vec<Box<dyn Shape>>` with mixed shapes and print all areas
+### Tuple destructuring in function parameters
+
+When implementing `From<(u8, u8, u8)>`, you can destructure the tuple directly in the parameter list:
+
+```rust
+impl From<(u8, u8, u8)> for Color {
+    fn from((r, g, b): (u8, u8, u8)) -> Color {
+        Color { r, g, b }
+    }
+}
+```
+
+The type annotation goes on the whole tuple; the binding is destructured on the left. Same pattern works in closures: `.map(|(k, v)| ...)` when iterating a `HashMap`.
+
+### `impl Trait` in return position — when it matters
+
+Returning `impl Trait` from a concrete struct is rarely the best choice — just return the type directly. The real use case is **closures**, which have anonymous types you can't name:
+
+```rust
+fn make_adder(x: i32) -> impl Fn(i32) -> i32 {
+    move |y| x + y
+}
+```
+
+You can't write the closure's type explicitly — `impl Fn(...)` is the only way.
+
+### `Clone` vs `Copy`
+
+- `Copy` — implicit, silent duplication. Stack-only types (`i32`, `u8`, `bool`). Assignment keeps both.
+- `Clone` — explicit, must call `.clone()`. Used for heap-owning types (`String`, `Vec`, your structs).
+- Every `Copy` type also implements `Clone`, but not vice versa.
+- Custom `Clone` implementations are rare — only needed when your type contains raw pointers. Otherwise just `#[derive(Clone)]`.
+
+### Mutability lives on the binding, not the type
+
+```rust
+let mut c2 = c.clone();
+c2.r = 0; // ok — c2 is mut, so all its fields are mutable
+```
+
+`mut` on the binding gives you permission to modify the whole value including its fields.
+
+---
+
+## Exercises completed
+
+- `Shape` trait with `area()` and default `describe()`
+- `Circle` and `Rectangle` implementations
+- `print_area(shape: &impl Shape)` — static dispatch helper
+- `Color` struct with `From<(u8, u8, u8)>`, `Clone`, `Debug`
+- Cloned `Color`, mutated clone, printed both to confirm independence
 
 ---
 
