@@ -1,0 +1,3 @@
+[submodule "chip8"]
+	path = chip8
+	url = git@github.com:ThomasVanRiel/rust-chip8.git
