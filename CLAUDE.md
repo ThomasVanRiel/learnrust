@@ -30,7 +30,7 @@
 
 ### Project 4 (Capstone): CHIP-8 Emulator
 
-**Status:** Not started — graduation project after completing deep-dive classes 15–18. Thomas has prior experience implementing CHIP-8 in C++ with OpenGL.
+**Status:** In progress. Module structure in place, Memory with ROM loading, Display with sprite drawing and collision detection, Cpu with fetch/decode/execute and first 4 opcodes (CLS, JP, LD Vx, ADD Vx). Tests passing. Next: remaining opcodes, then minifb renderer.
 
 **Learning goals:**
 - **Emulation fundamentals:** fetch/decode/execute loop, opcode dispatch via `match`, program counter, stack, registers
