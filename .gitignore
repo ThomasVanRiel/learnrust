@@ -15,5 +15,3 @@
 Thumbs.db
 .env
 
-# CHIP-8 emulator repo (tracked separately)
-chip8/
