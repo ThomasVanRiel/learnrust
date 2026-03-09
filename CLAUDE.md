@@ -30,7 +30,7 @@
 
 ### Project 4 (Capstone): CHIP-8 Emulator
 
-**Status:** In progress. Module structure in place, Memory with ROM loading, Display with sprite drawing and collision detection, Cpu with fetch/decode/execute and first 4 opcodes (CLS, JP, LD Vx, ADD Vx). Tests passing. Next: remaining opcodes, then minifb renderer.
+**Status:** In progress. All 35 opcodes implemented and working. Font sprites preloaded in RAM. Timer thread running at 60Hz via `Arc<Mutex<Timers>>`. `MinifbRenderer` with 10× scaling and keyboard input. Full fetch/decode/execute loop in `main.rs`. Wasm build working in browser via `wasm-pack` and `wasm-bindgen` — same core, JS drives the loop via `requestAnimationFrame`. Tested on both platforms. Next: `NullRenderer` for headless tests, SDL2 renderer (FFI).
 
 **Learning goals:**
 - **Emulation fundamentals:** fetch/decode/execute loop, opcode dispatch via `match`, program counter, stack, registers
@@ -75,6 +75,20 @@ pub trait Renderer {
 - Deep dive on stack vs heap, ownership (three rules), borrowing (`&T` vs `&mut T`), `String` vs `&str`.
 - Completed Steps 1-2 of the incremental plan.
 - See [class01.md](classnotes/class01.md) for full notes.
+
+### Class 19 — 2026-03-08
+
+- Completed all 35 CHIP-8 opcodes: font lookup (FX29), BCD decode (FX33), timer opcodes (FX07/FX15/FX18), input opcodes (EX9E/EXA1/FX0A).
+- Font sprites preloaded in `Memory::new()` at `0x000`.
+- Timers moved to `Arc<Mutex<Timers>>` shared between CPU and a 60Hz timer thread.
+- `MutexGuard` NLL drop behavior — temporary guard released before sleep, not at end of loop.
+- `Arc` explained as Rust's `shared_ptr` — atomically reference counted, thread-safe (vs `Rc` which isn't).
+- `Box<dyn Renderer>` — `run()` now accepts any renderer, `main()` decides the concrete type.
+- `MinifbRenderer` implemented: 10× scaling with `flat_map`/`repeat_n`, keyboard mapping via array position trick.
+- `overflowing_add`/`overflowing_sub` for overflow-safe arithmetic — debug mode panics on overflow.
+- WSLg setup for GUI apps in WSL2 — `WAYLAND_DISPLAY=""` to force X11 if decoration error occurs.
+- Full emulator loop wired in `main.rs` — tested against demo ROMs successfully.
+- See [class19.md](classnotes/class19.md) for full notes.
 
 ### Class 18 — 2026-03-06
 
@@ -370,7 +384,8 @@ pub trait Renderer {
 - [Class 16](classnotes/class16.md) — Closures: capturing, `Fn`/`FnMut`/`FnOnce`, `move`, returning closures
 - [Class 17](classnotes/class17.md) — Iterators: writing your own, lazy evaluation, adapters, consumers
 - [Class 18](classnotes/class18.md) — Error handling: `thiserror`, `anyhow`, when to use which
-- [Project 4](chip8.md) — CHIP-8 Emulator: opcode engine, concurrency, pluggable renderer, FFI *(not started)*
+- [Class 19](classnotes/class19.md) — CHIP-8: remaining opcodes, font/BCD, timers thread, Box<dyn Renderer>, MinifbRenderer, input
+- [Project 4](chip8.md) — CHIP-8 Emulator: opcode engine, concurrency, pluggable renderer, FFI
 
 ## Project 1 Incremental Plan
 
@@ -410,7 +425,9 @@ Split into four modules: `filter.rs` (`FilterOp` enum + `compare<T: PartialOrd>(
 
 **Concepts Thomas has also learned (Class 18):** `anyhow::Result`, `.context()` / `.with_context()`, `thiserror`, `#[error("...")]`, `#[from]`, when to use `anyhow` vs `thiserror`.
 
-**Concepts not yet introduced:** `Box<dyn Trait>`, async.
+**Concepts Thomas has also learned (Class 19):** `Arc` (shared ownership across threads, atomically reference counted), `Mutex`/`MutexGuard` NLL drop behavior, `Arc::clone()`, `Box<dyn Trait>` (dynamic dispatch in practice), `thread::spawn` with `move`, `overflowing_add`/`overflowing_sub`/`wrapping_add`, `repeat_n`, 2D scaling with `flat_map`, `filter_map` with array position trick for key mapping, `wasm-pack`/`wasm-bindgen`, `#[wasm_bindgen]` on structs and impl blocks, `[lib] crate-type = ["cdylib", "rlib"]`, target-specific dependencies (`[target.'cfg(...)'.dependencies]`), `#[cfg(target_arch = "wasm32")]` for conditional compilation, JS `requestAnimationFrame` loop driving Wasm, `Uint8Array` from `Vec<u8>` across Wasm boundary, `getrandom` `wasm_js` feature for Wasm compatibility.
+
+**Concepts not yet introduced:** async.
 
 **Project 1 status:** Complete.
 **Project 2 status:** Complete. Modules extracted, tests added, `--group-by` with HashMap implemented.
