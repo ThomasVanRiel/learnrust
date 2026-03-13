@@ -28,6 +28,22 @@
 **Concepts:** async Rust, tokio, axum, serde_json, sqlx, SQLite.
 **Status:** Complete. All 5 routes working with SQLite persistence, typed request bodies, and custom error handling.
 
+### Project 5: `blog_os` — Custom OS kernel
+
+**Concepts:** `#![no_std]`, bare metal, custom compile targets, bootloader, VGA text buffer, interrupts, memory paging, heap allocator, async/await in a kernel context.
+**Status:** Starting. Following [Writing an OS in Rust](https://os.phil-opp.com/) by Philipp Oppermann. Runs in QEMU.
+
+**Learning goals:**
+- **`#![no_std]`** — no standard library, no heap, no OS beneath you
+- **Bare metal boot** — how BIOS/UEFI hands control to a bootloader and then to your kernel
+- **Custom compile target** — JSON target spec, cross-compilation, `cargo build --target`
+- **VGA text buffer** — writing to `0xb8000` directly, volatile writes, `lazy_static`, `spin::Mutex`
+- **CPU exceptions** — IDT, exception handlers, double faults, stack overflows
+- **Interrupts** — hardware interrupts (PIC), timer, keyboard
+- **Memory paging** — page tables, virtual vs physical addresses, mapping new pages
+- **Heap allocator** — implementing your own allocator, `GlobalAlloc` trait
+- **Async in a kernel** — cooperative multitasking, custom executor, `Future` without tokio
+
 ### Project 4 (Capstone): CHIP-8 Emulator
 
 **Status:** In progress. All 35 opcodes implemented and working. Font sprites preloaded in RAM. Timer thread running at 60Hz via `Arc<Mutex<Timers>>`. `MinifbRenderer` with 10× scaling and keyboard input. Full fetch/decode/execute loop in `main.rs`. Wasm build working in browser via `wasm-pack` and `wasm-bindgen` — same core, JS drives the loop via `requestAnimationFrame`. Tested on both platforms. Next: `NullRenderer` for headless tests, SDL2 renderer (FFI).
