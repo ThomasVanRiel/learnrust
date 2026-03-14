@@ -28,6 +28,22 @@
 **Concepts:** async Rust, tokio, axum, serde_json, sqlx, SQLite.
 **Status:** Complete. All 5 routes working with SQLite persistence, typed request bodies, and custom error handling.
 
+### Project 5: `blog_os` — Custom OS kernel
+
+**Concepts:** `#![no_std]`, bare metal, custom compile targets, bootloader, VGA text buffer, interrupts, memory paging, heap allocator, async/await in a kernel context.
+**Status:** Starting. Following [Writing an OS in Rust](https://os.phil-opp.com/) by Philipp Oppermann. Runs in QEMU.
+
+**Learning goals:**
+- **`#![no_std]`** — no standard library, no heap, no OS beneath you
+- **Bare metal boot** — how BIOS/UEFI hands control to a bootloader and then to your kernel
+- **Custom compile target** — JSON target spec, cross-compilation, `cargo build --target`
+- **VGA text buffer** — writing to `0xb8000` directly, volatile writes, `lazy_static`, `spin::Mutex`
+- **CPU exceptions** — IDT, exception handlers, double faults, stack overflows
+- **Interrupts** — hardware interrupts (PIC), timer, keyboard
+- **Memory paging** — page tables, virtual vs physical addresses, mapping new pages
+- **Heap allocator** — implementing your own allocator, `GlobalAlloc` trait
+- **Async in a kernel** — cooperative multitasking, custom executor, `Future` without tokio
+
 ### Project 4 (Capstone): CHIP-8 Emulator
 
 **Status:** In progress. Most opcodes implemented. Next: remaining opcodes (FX07/FX15/FX18 timers, FX0A key wait, FX29 font, FX33 BCD), then minifb renderer to get pixels on screen.
@@ -389,7 +405,8 @@ pub trait Renderer {
 - [Class 16](classnotes/class16.md) — Closures: capturing, `Fn`/`FnMut`/`FnOnce`, `move`, returning closures
 - [Class 17](classnotes/class17.md) — Iterators: writing your own, lazy evaluation, adapters, consumers
 - [Class 18](classnotes/class18.md) — Error handling: `thiserror`, `anyhow`, when to use which
-- [Project 4](chip8.md) — CHIP-8 Emulator: opcode engine, concurrency, pluggable renderer, FFI *(not started)*
+- [Class 19](classnotes/class19.md) — CHIP-8: remaining opcodes, font/BCD, timers thread, Box<dyn Renderer>, MinifbRenderer, input
+- [Project 4](chip8.md) — CHIP-8 Emulator: opcode engine, concurrency, pluggable renderer, FFI
 
 ## Project 1 Incremental Plan
 
@@ -429,7 +446,9 @@ Split into four modules: `filter.rs` (`FilterOp` enum + `compare<T: PartialOrd>(
 
 **Concepts Thomas has also learned (Class 18):** `anyhow::Result`, `.context()` / `.with_context()`, `thiserror`, `#[error("...")]`, `#[from]`, when to use `anyhow` vs `thiserror`.
 
-**Concepts not yet introduced:** `Box<dyn Trait>`, async.
+**Concepts Thomas has also learned (Class 19):** `Arc` (shared ownership across threads, atomically reference counted), `Mutex`/`MutexGuard` NLL drop behavior, `Arc::clone()`, `Box<dyn Trait>` (dynamic dispatch in practice), `thread::spawn` with `move`, `overflowing_add`/`overflowing_sub`/`wrapping_add`, `repeat_n`, 2D scaling with `flat_map`, `filter_map` with array position trick for key mapping, `wasm-pack`/`wasm-bindgen`, `#[wasm_bindgen]` on structs and impl blocks, `[lib] crate-type = ["cdylib", "rlib"]`, target-specific dependencies (`[target.'cfg(...)'.dependencies]`), `#[cfg(target_arch = "wasm32")]` for conditional compilation, JS `requestAnimationFrame` loop driving Wasm, `Uint8Array` from `Vec<u8>` across Wasm boundary, `getrandom` `wasm_js` feature for Wasm compatibility.
+
+**Concepts not yet introduced:** async.
 
 **Project 1 status:** Complete.
 **Project 2 status:** Complete. Modules extracted, tests added, `--group-by` with HashMap implemented.
